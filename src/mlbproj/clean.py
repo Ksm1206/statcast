@@ -30,8 +30,32 @@ def outcome_class(ev: pd.Series) -> pd.Series:
     return out
 
 
+STR_COLS = {"game_date", "game_type", "player_name", "stand", "p_throws", "home_team", "away_team", "inning_topbot",
+            "pitch_type", "pitch_name", "type", "description", "events", "bb_type"}
+
+
+def _to_numpy_dtypes(df: pd.DataFrame) -> pd.DataFrame:
+    """pybaseball은 Int64/Float64 같은 nullable 타입을 돌려주는데, numpy 연산에서 object로 바뀌어 오류를 냄.
+    숫자 컬럼은 전부 float32(결측=NaN), 문자 컬럼은 일반 object 문자열로 통일."""
+    for c in df.columns:
+        if c in STR_COLS:
+            if c != "game_date":
+                df[c] = df[c].astype(object).where(df[c].notna(), None)
+            continue
+        col = df[c]
+        if c in ("pitcher", "batter", "game_pk", "at_bat_number", "pitch_number"):
+            df[c] = pd.to_numeric(col.astype(object), errors="coerce").fillna(-1).astype("int64")
+        elif col.dtype == object or pd.api.types.is_extension_array_dtype(col.dtype) or col.dtype == bool:
+            df[c] = pd.to_numeric(col.astype(object), errors="coerce").astype("float32")
+        elif col.dtype != "float32":
+            df[c] = col.astype("float32")
+    df["game_date"] = pd.to_datetime(df["game_date"])
+    return df
+
+
 def load_and_clean(season: int) -> pd.DataFrame:
     df = pd.read_parquet(RAW / f"statcast_{season}.parquet")
+    df = _to_numpy_dtypes(df)
     df = df[df["pitch_type"].notna() & df["plate_x"].notna()].copy()
     df["is_post"] = df["game_type"].isin(POST_TYPES)
     df = df[df["game_type"].isin({"R"} | POST_TYPES)]
