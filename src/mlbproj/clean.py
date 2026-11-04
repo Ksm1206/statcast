@@ -1,0 +1,95 @@
+"""2단계: 투구 데이터 정리와 파생 변수 생성."""
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+
+from .config import PITCH_GROUP, RAW
+
+SWING = {"swinging_strike", "swinging_strike_blocked", "foul", "foul_tip", "hit_into_play",
+         "foul_bunt", "missed_bunt", "bunt_foul_tip"}
+WHIFF = {"swinging_strike", "swinging_strike_blocked", "foul_tip", "missed_bunt"}
+CALLED_STRIKE = {"called_strike"}
+HIT = {"single", "double", "triple", "home_run"}
+AB_EVENTS = HIT | {"field_out", "strikeout", "grounded_into_double_play", "force_out", "double_play",
+                   "field_error", "fielders_choice", "fielders_choice_out", "strikeout_double_play",
+                   "triple_play"}
+TB = {"single": 1, "double": 2, "triple": 3, "home_run": 4}
+POST_TYPES = {"F", "D", "L", "W"}
+
+
+def outcome_class(ev: pd.Series) -> pd.Series:
+    """타석 결과 6분류: K / BB(볼넷+사구) / 1B / XBH(2루타·3루타) / HR / OUT."""
+    out = pd.Series("OUT", index=ev.index, dtype="object")
+    out[ev.isin(["strikeout", "strikeout_double_play"])] = "K"
+    out[ev.isin(["walk", "hit_by_pitch", "intent_walk"])] = "BB"
+    out[ev == "single"] = "1B"
+    out[ev.isin(["double", "triple"])] = "XBH"
+    out[ev == "home_run"] = "HR"
+    out[ev.isna()] = None
+    return out
+
+
+def load_and_clean(season: int) -> pd.DataFrame:
+    df = pd.read_parquet(RAW / f"statcast_{season}.parquet")
+    df = df[df["pitch_type"].notna() & df["plate_x"].notna()].copy()
+    df["is_post"] = df["game_type"].isin(POST_TYPES)
+    df = df[df["game_type"].isin({"R"} | POST_TYPES)]
+    df["season"] = season
+    df["pitch_type"] = df["pitch_type"].replace({"FA": "FF", "FO": "FS", "CS": "CU"})
+    df["pitch_group"] = df["pitch_type"].map(PITCH_GROUP).fillna("기타")
+
+    d = df["description"]
+    df["swing"] = d.isin(SWING)
+    df["whiff"] = d.isin(WHIFF)
+    df["called_strike"] = d.isin(CALLED_STRIKE)
+    df["csw"] = df["whiff"] | df["called_strike"]
+    df["take"] = ~df["swing"]
+    # 존 판정: 선수별 존 상·하단 사용
+    half_plate = 0.83
+    df["in_zone"] = (df["plate_x"].abs() <= half_plate) & (df["plate_z"] >= df["sz_bot"]) & (df["plate_z"] <= df["sz_top"])
+    df["chase"] = df["swing"] & ~df["in_zone"]
+    df["zone_swing"] = df["swing"] & df["in_zone"]
+    df["contact"] = df["swing"] & ~df["whiff"]
+    # 경계(섀도) 존: 존 가장자리 ±약 1.5인치(0.125ft) 안팎
+    edge_x = (df["plate_x"].abs() - half_plate).abs() <= 0.125
+    edge_z = ((df["plate_z"] - df["sz_bot"]).abs() <= 0.125) | ((df["plate_z"] - df["sz_top"]).abs() <= 0.125)
+    inside_wide = (df["plate_x"].abs() <= half_plate + 0.125) & (df["plate_z"] >= df["sz_bot"] - 0.125) & (df["plate_z"] <= df["sz_top"] + 0.125)
+    df["edge"] = inside_wide & (edge_x | edge_z)
+    # 좌·우 비교용 정규화: 좌투수의 수평 값 반전 (팔 쪽 = +)
+    sgn = np.where(df["p_throws"] == "L", -1.0, 1.0)
+    df["hb_in"] = (df["pfx_x"] * 12 * -sgn).astype("float32")   # 팔 쪽 수평 무브먼트(인치)
+    df["ivb_in"] = (df["pfx_z"] * 12).astype("float32")          # 수직 무브먼트(인치)
+    df["rel_x_norm"] = (df["release_pos_x"] * -sgn).astype("float32")
+    # 타구
+    bip = d.eq("hit_into_play") & df["launch_speed"].notna()
+    df["bip"] = bip
+    df["hard_hit"] = bip & (df["launch_speed"] >= 95)
+    df["barrel"] = bip & (df["launch_speed_angle"] == 6)
+    df["sweet_spot"] = bip & df["launch_angle"].between(8, 32)
+    # 타구 방향 (스프레이 각도, 타자 기준 당겨치기 +)
+    ang = np.degrees(np.arctan2(df["hc_x"] - 125.42, 198.27 - df["hc_y"]))
+    df["spray_angle"] = np.where(df["stand"] == "L", -ang, ang).astype("float32")  # 우타 기준 음수=당겨침
+    df["direction"] = pd.cut(df["spray_angle"], [-90, -15, 15, 90], labels=["당겨치기", "가운데", "밀어치기"])
+    # 볼카운트
+    df["count"] = df["balls"].astype(int).astype(str) + "-" + df["strikes"].astype(int).astype(str)
+    df["count_state"] = np.select(
+        [df["count"].eq("0-0"), df["strikes"].eq(2) & (df["balls"] < 3), df["balls"] > df["strikes"]],
+        ["초구", "2스트라이크", "타자 유리"], default="동등/투수 유리")
+    df.loc[df["count"].eq("3-2"), "count_state"] = "풀카운트"
+    # 타석 결과
+    ev = df["events"]
+    df["pa_end"] = ev.notna() & (df["woba_denom"].fillna(0) > 0) | ev.isin(["strikeout", "walk"])
+    df["outcome"] = outcome_class(ev.where(df["pa_end"]))
+    df["is_hit"] = ev.isin(HIT)
+    df["is_ab"] = ev.isin(AB_EVENTS)
+    df["tb"] = ev.map(TB).fillna(0).astype("int8")
+    df["xwoba_pa"] = np.where(df["pa_end"],
+                              np.where(df["bip"], df["estimated_woba_using_speedangle"], df["woba_value"]), np.nan)
+    df["month"] = df["game_date"].dt.month.astype("int8")
+    # 야수 등판 제거: 시즌 패스트볼 평균 구속 < 84mph 이면서 300구 미만
+    fb = df[df["pitch_group"] == "패스트볼"].groupby("pitcher")["release_speed"].mean()
+    n = df.groupby("pitcher").size()
+    position_players = fb[(fb < 84) & (n.reindex(fb.index) < 300)].index
+    df = df[~df["pitcher"].isin(position_players)]
+    return df.reset_index(drop=True)
