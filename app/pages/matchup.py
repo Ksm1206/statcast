@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from lib import CAT, DATA, DIV, INK, MUTED, PITCH_COLOR, SURFACE, grid_heatmap, ko, load, meta, names, note, require_data, setup
+from lib import ALL_TEAMS, CAT, DATA, filter_team, team_player_select, DIV, INK, MUTED, PITCH_COLOR, SURFACE, grid_heatmap, ko, load, meta, names, note, require_data, setup
 from mlbproj.analysis.matchup import OUTCOMES, WOBA_W, predict_pairs
 
 setup("⚔️ 맞대결 시뮬레이터")
@@ -34,9 +34,12 @@ seasons = sorted(pf["season"].unique(), reverse=True)
 season = st.selectbox("특성 기준 시즌", seasons)
 pq = ps[(ps["season"] == season) & ps["qualified"]].sort_values("pitches", ascending=False)
 bq = bs[(bs["season"] == season) & bs["qualified"]].sort_values("PA", ascending=False)
-c1, c2 = st.columns(2)
-pid = c1.selectbox("투수", pq["pitcher"], format_func=lambda i: pn.get(i, i))
-bid = c2.selectbox("타자", bq["batter"], format_func=lambda i: bn.get(i, i))
+st.markdown("##### 투수")
+c1, c2 = st.columns([2, 3])
+pid = team_player_select(pq, "pitcher", "mp", "투수", c1, c2)
+st.markdown("##### 타자")
+c1, c2 = st.columns([2, 3])
+bid = team_player_select(bq, "batter", "mb", "타자", c1, c2)
 p_throws = pq.set_index("pitcher").loc[pid, "p_throws"]
 b_stand = bq.set_index("batter").loc[bid, "stand"]
 stand = ("L" if p_throws == "R" else "R") if b_stand == "S" else b_stand
@@ -138,10 +141,11 @@ else:
 # ------------------------------------------------ 최적 타순
 st.divider()
 st.subheader("이 투수 상대 최적 타자 9명")
-teams = sorted(t for t in bs[bs["season"] == season]["팀"].dropna().unique() if t)
+from lib import team_list
+teams = team_list(bq)
 if teams:
-    team = st.selectbox("팀", teams)
-    roster = bq[bq["팀"] == team]
+    team = st.selectbox("상대 구단 (타선)", teams, key="lineup_team")
+    roster = filter_team(bq, team)
     if len(roster):
         st_ = np.where(roster["stand"] == "S", "L" if p_throws == "R" else "R", roster["stand"])
         req = pd.DataFrame({"pitcher": pid, "batter": roster["batter"].values, "stand": st_, "p_throws": p_throws, "season": season + 1})

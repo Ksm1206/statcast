@@ -93,17 +93,49 @@ def names(kind: str) -> dict[int, str]:
     return t.sort_values("season").groupby(kind)["name"].last().to_dict()
 
 
+ALL_TEAMS = "전체 구단"
+
+
+def team_list(sub: pd.DataFrame) -> list[str]:
+    """시즌 중 이적한 선수는 '팀A/팀B'로 저장되어 있어 각 팀에 모두 포함."""
+    teams = set()
+    for t in sub.get("팀", pd.Series(dtype=object)).dropna():
+        teams |= {x.strip() for x in str(t).split("/") if x.strip()}
+    return sorted(teams)
+
+
+def filter_team(sub: pd.DataFrame, team: str) -> pd.DataFrame:
+    if team == ALL_TEAMS:
+        return sub
+    return sub[sub["팀"].fillna("").astype(str).str.split("/").apply(lambda xs: team in [x.strip() for x in xs])]
+
+
+def team_player_select(sub: pd.DataFrame, kind: str, key: str, label: str, col_team, col_player):
+    """구단 선택 → 그 구단 선수 선택. 반환: player_id"""
+    team = col_team.selectbox("구단", [ALL_TEAMS] + team_list(sub), key=f"{key}_team")
+    s2 = filter_team(sub, team)
+    if s2.empty:
+        col_player.warning("조건에 맞는 선수가 없습니다.")
+        st.stop()
+    if team == ALL_TEAMS:
+        lab = {r[kind]: f"{r['name']}  ({r.get('팀', '') or ''})" for _, r in s2.iterrows()}
+    else:
+        size = "pitches" if kind == "pitcher" else "PA"
+        unit = "구" if kind == "pitcher" else "타석"
+        lab = {r[kind]: f"{r['name']}  · {int(r[size]):,}{unit}" for _, r in s2.iterrows()}
+    opts = s2[kind].tolist()
+    return col_player.selectbox(label, opts, format_func=lambda i: lab.get(i, str(i)), key=f"{key}_pid")
+
+
 def pick_player(kind: str, key: str, label: str | None = None, default_top: bool = True):
-    """시즌 + 선수 선택. 반환: (player_id, season, row)."""
+    """시즌 → 구단 → 선수 선택. 반환: (player_id, season, row)."""
     t = load(f"{kind}_season")
     seasons = sorted(t["season"].unique(), reverse=True)
-    c1, c2 = st.columns([1, 3])
+    c1, c2, c3 = st.columns([1, 1.6, 2.4])
     season = c1.selectbox("시즌", seasons, key=f"{key}_season")
     sub = t[t["season"] == season].sort_values("pitches" if kind == "pitcher" else "PA", ascending=False)
     sub = sub[sub["qualified"]] if c1.checkbox("규정 표본만", True, key=f"{key}_q") else sub
-    opts = sub[kind].tolist()
-    lab = {r[kind]: f"{r['name']}  ({r.get('팀', '') or ''})" for _, r in sub.iterrows()}
-    pid = c2.selectbox(label or ("투수" if kind == "pitcher" else "타자"), opts, format_func=lambda i: lab.get(i, str(i)), key=f"{key}_pid")
+    pid = team_player_select(sub, kind, key, label or ("투수" if kind == "pitcher" else "타자"), c2, c3)
     return pid, season, sub[sub[kind] == pid].iloc[0]
 
 
