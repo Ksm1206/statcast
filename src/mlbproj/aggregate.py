@@ -286,9 +286,19 @@ def spray_points(df: pd.DataFrame, season: int, b_ok) -> pd.DataFrame:
 
 def transitions(df: pd.DataFrame, season: int) -> pd.DataFrame:
     reg = df[~df["is_post"]].sort_values(["game_pk", "at_bat_number", "pitch_number"])
-    nxt = reg.groupby(["game_pk", "at_bat_number"])["pitch_type"].shift(-1)
-    t = pd.DataFrame({"pitcher": reg["pitcher"], "from": reg["pitch_type"], "to": nxt}).dropna()
-    g = t.groupby(["pitcher", "from", "to"]).size().rename("n").reset_index()
+    grp = reg.groupby(["game_pk", "at_bat_number"])
+    nxt = grp["pitch_type"].shift(-1)
+    t = pd.DataFrame({"pitcher": reg["pitcher"], "from": reg["pitch_type"], "to": nxt,
+                      # 두 번째 공(도착 구종)의 결과: 간선별 위력 계산용
+                      "swing": grp["swing"].shift(-1), "whiff": grp["whiff"].shift(-1), "csw": grp["csw"].shift(-1),
+                      "two_strike": grp["strikes"].shift(-1).eq(2)}).dropna(subset=["to"])
+    for c in ("swing", "whiff", "csw"):
+        t[c] = t[c].astype(bool).astype(int)
+    t["whiff_2s"] = t["whiff"] * t["two_strike"]
+    t["swing_2s"] = t["swing"] * t["two_strike"]
+    g = t.groupby(["pitcher", "from", "to"]).agg(n=("swing", "size"), swing=("swing", "sum"), whiff=("whiff", "sum"),
+                                                csw=("csw", "sum"), n_2s=("two_strike", "sum"), swing_2s=("swing_2s", "sum"),
+                                                whiff_2s=("whiff_2s", "sum")).reset_index()
     g["season"] = season
     return g
 

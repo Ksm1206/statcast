@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from lib import (PCFG, INK2, MUTED, PITCH_COLOR, SEQ, SURFACE, fmt, grid_heatmap, ko, load, meta, names, note,
+from lib import (PCFG, network_figure, profile_block, INK2, MUTED, PITCH_COLOR, SEQ, SURFACE, fmt, grid_heatmap, ko, load, meta, names, note,
                  percentile_bars, pick_player, require_data, setup)
 
 setup("🎯 투수 리포트")
@@ -71,6 +71,12 @@ if view == "요약":
             st.markdown("##### 비슷한 투수 Top 5 (코사인 유사도)")
             st.dataframe(s[["순위", "선수", "유사도"]], hide_index=True, column_config={
                 "유사도": st.column_config.ProgressColumn(min_value=0, max_value=1, format="%.2f")})
+
+    st.markdown("##### 프로필 레이더와 종합 지수")
+    profile_block("pitcher", pid, season, row,
+                  [("K%", "삼진"), ("BB%", "볼넷 억제"), ("Whiff%", "헛스윙"), ("Chase%", "유인"), ("xwOBA", "피xwOBA 억제"),
+                   ("HardHit%", "강한 타구 억제"), ("GB%", "땅볼"), ("패스트볼 평균구속", "구속")],
+                  c_row.iloc[0]["유형"] if len(c_row) else None)
 
 if view == "구종 구성":
     # ------------------------------------------------ 구종 구성
@@ -204,6 +210,32 @@ if view == "볼배합":
                               xaxis_title="다음 공", yaxis=dict(title="이전 공", autorange="reversed"))
             st.plotly_chart(fig, width="stretch", config=PCFG)
             note("엔트로피가 높을수록 다음 공을 예측하기 어려운 투수. 같은 타석 안의 연속 투구만 사용.")
+    # 네트워크
+    st.markdown("##### 볼배합 네트워크")
+    nodes = load("network_nodes")
+    nd = nodes[(nodes["pitcher"] == pid) & (nodes["season"] == season)]
+    ns = load("network_summary")
+    sm_ = ns[(ns["pitcher"] == pid) & (ns["season"] == season)]
+    tr = load("pitcher_transitions")
+    t = tr[(tr["pitcher"] == pid) & (tr["season"] == season)]
+    if len(nd) and len(t) and "swing" in t:
+        types = nd.sort_values("pagerank", ascending=False)["pitch_type"].tolist()
+        c1, c2 = st.columns([3, 2])
+        c1.plotly_chart(network_figure(t[t["from"].isin(types) & t["to"].isin(types)], types, nd,
+                                       "볼배합 네트워크 (원 크기·숫자 = PageRank)"), width="stretch", config=PCFG)
+        with c2:
+            if len(sm_):
+                r = sm_.iloc[0]
+                st.metric("허브 구종 (PageRank 1위)", ko(r["허브 구종"]), f"PageRank {r['허브 PageRank']:.2f}", delta_color="off")
+                st.metric("볼배합 엔트로피 (예측 어려움)", f"{r['엔트로피']:.2f} bit", f"최대치 대비 {r['엔트로피(정규화)'] * 100:.0f}%", delta_color="off")
+                if r["최고 위력 연결"]:
+                    a_, b_ = r["최고 위력 연결"].split("→")
+                    st.metric("가장 위력적인 연결", f"{ko(a_)} → {ko(b_)}", f"헛스윙률 {r['최고 연결 헛스윙률'] * 100:.0f}%", delta_color="off")
+                if r["2S 결정 연결"]:
+                    a_, b_ = r["2S 결정 연결"].split("→")
+                    st.metric("2스트라이크 결정 연결", f"{ko(a_)} → {ko(b_)}", f"헛스윙률 {r['2S 결정 헛스윙률'] * 100:.0f}%", delta_color="off")
+            note("화살표 = 다음 공으로 넘어가는 방향, 굵기 = 전이 확률. PageRank: 다른 구종에서 자주 넘어오는 '중심' 구종일수록 큼. 구사율이 높다고 꼭 허브인 것은 아닙니다. "
+                 "전이 확률 8% 미만 연결은 그림에서 생략.")
 
 if view == "구속 변화":
     # ------------------------------------------------ 시즌 내 구속

@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.linear_model import HuberRegressor, LinearRegression
+from sklearn.linear_model import HuberRegressor, LinearRegression, TheilSenRegressor
 from sklearn.preprocessing import StandardScaler
 
 from .common import bh_fdr, ljung_box_p, load, newey_west_se, save, save_json
@@ -59,12 +59,41 @@ def era_residuals() -> tuple[pd.DataFrame, dict]:
     d["기대 ERA"] = hub.predict(Z)
     d["ERA 잔차"] = d["ERA"] - d["기대 ERA"]
     d["ERA 잔차(OLS)"] = d["ERA"] - ols.predict(Z)
+    ts = TheilSenRegressor(random_state=0, max_subpopulation=2000, n_jobs=-1).fit(Z, d["ERA"])
+    d["ERA 잔차(Theil-Sen)"] = d["ERA"] - ts.predict(Z)
     rho = stats.spearmanr(d["ERA 잔차"], d["ERA 잔차(OLS)"]).statistic
-    meta = {"huber_coef": dict(zip(feats, hub.coef_.round(3).tolist())), "ols_coef": dict(zip(feats, ols.coef_.round(3).tolist())),
+    rho_ts = stats.spearmanr(d["ERA 잔차"], d["ERA 잔차(Theil-Sen)"]).statistic
+    rho_ols_ts = stats.spearmanr(d["ERA 잔차(OLS)"], d["ERA 잔차(Theil-Sen)"]).statistic
+
+    def top_overlap(a, b, k=20):  # 시즌별 '불운 상위 k명'이 얼마나 겹치나
+        out = []
+        for _, g in d.groupby("season"):
+            A, B = set(g.nlargest(k, a)["pitcher"]), set(g.nlargest(k, b)["pitcher"])
+            out.append(len(A & B) / k)
+        return float(np.mean(out))
+    # 회귀 진단: 잔차 vs 예측 + LOWESS, Q-Q
+    from statsmodels.nonparametric.smoothers_lowess import lowess
+    lw = lowess(d["ERA 잔차"], d["기대 ERA"], frac=0.3, return_sorted=True)
+    r = d["ERA 잔차"].values
+    osm, osr = stats.probplot(r, dist="norm", fit=False)
+    q = pd.DataFrame({"이론 분위수": osm, "표본 분위수": (np.sort(r) - r.mean()) / r.std()})
+    save("diag_lowess", pd.DataFrame({"기대 ERA": lw[:, 0], "LOWESS": lw[:, 1]}))
+    save("diag_qq", q.iloc[:: max(1, len(q) // 600)])
+    save("diag_resid", d[["기대 ERA", "ERA 잔차"]].sample(min(len(d), 2500), random_state=0))
+    coef = pd.DataFrame({"변수": feats, "OLS": ols.coef_, "Huber": hub.coef_, "Theil-Sen": ts.coef_})
+    save("diag_coef", coef)
+    meta = {"theilsen_coef": dict(zip(feats, ts.coef_.round(3).tolist())),
+            "huber_vs_theilsen_spearman": float(rho_ts), "ols_vs_theilsen_spearman": float(rho_ols_ts),
+            "top20_overlap_huber_ols": top_overlap("ERA 잔차", "ERA 잔차(OLS)"),
+            "top20_overlap_huber_ts": top_overlap("ERA 잔차", "ERA 잔차(Theil-Sen)"),
+            "resid_skew": float(stats.skew(r)), "resid_excess_kurtosis": float(stats.kurtosis(r)),
+            "lowess_max_abs": float(np.abs(lw[:, 1]).max()),
+            "shapiro_p": float(stats.shapiro(r[:5000]).pvalue),
+            "huber_coef": dict(zip(feats, hub.coef_.round(3).tolist())), "ols_coef": dict(zip(feats, ols.coef_.round(3).tolist())),
             "huber_vs_ols_spearman": float(rho), "n": len(d),
             "era_resid_persistence": _persistence(d.rename(columns={"pitcher": "pid"}), "pid", "ERA 잔차"),
             "k_persistence": _persistence(d.rename(columns={"pitcher": "pid"}), "pid", "K%")}
-    return d[["pitcher", "season", "ERA", "기대 ERA", "ERA 잔차", "ERA 잔차(OLS)", "FIP", "IP"]], meta
+    return d[["pitcher", "season", "ERA", "기대 ERA", "ERA 잔차", "ERA 잔차(OLS)", "ERA 잔차(Theil-Sen)", "FIP", "IP"]], meta
 
 
 def main():

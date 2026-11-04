@@ -41,6 +41,7 @@ def cluster_threshold_sensitivity() -> list[dict]:
 
 def main():
     cm, sm_, lm, mm, am, ag = (_meta(n) for n in ("clusters_meta", "shap_meta", "luck_meta", "matchup_meta", "abs_meta", "aging_meta"))
+    cpm, nm = _meta("composite_meta"), _meta("network_meta")
     sens = cluster_threshold_sensitivity()
     comp = load("matchup_model_comparison")
     its = load("abs_its")
@@ -68,6 +69,11 @@ def main():
     if lm:
         if "huber_vs_ols_spearman" in lm:
             add("이상치 (ERA 회귀)", "Huber 로버스트 회귀 vs OLS 잔차 순위 비교", f"Spearman ρ = {lm['huber_vs_ols_spearman']:.3f}")
+        if "huber_vs_theilsen_spearman" in lm:
+            add("회귀 방법 선택 의존성", "Huber vs OLS vs Theil-Sen 잔차 순위·불운 상위 20명 겹침",
+                f"ρ(Huber,TS) = {lm['huber_vs_theilsen_spearman']:.3f}, 상위 20명 겹침 {lm['top20_overlap_huber_ts']:.0%}")
+            add("선형성 가정", "잔차 vs 예측값 LOWESS 곡선", f"LOWESS 최대 이탈 {lm['lowess_max_abs']:.2f} (0에 가까울수록 선형)")
+            add("잔차 분포 (이상치)", "Q-Q 플롯, 왜도·초과첨도", f"왜도 {lm['resid_skew']:.2f}, 초과첨도 {lm['resid_excess_kurtosis']:.2f}")
         add("자기상관 (경기 순서)", "Ljung-Box(시차 10) → Newey-West HAC 표준오차",
             f"자기상관 유의: 투수 {lm['ljungbox_autocorr_share_p']:.0%}, 타자 {lm['ljungbox_autocorr_share_b']:.0%}")
         add("다중검정 (수백 명 동시 검정)", "Benjamini-Hochberg FDR 5%",
@@ -95,6 +101,14 @@ def main():
     if ag.get("pitcher_velo"):
         add("에이징 커브의 생존 편향", "혼합효과모형(선수 무작위효과) + 델타 방법 비교",
             f"투수 구속 정점 {ag['pitcher_velo'].get('peak_age') or float('nan'):.1f}세")
+    for kind, lab in (("pitcher", "투수"), ("batter", "타자")):
+        if kind in cpm:
+            c = cpm[kind]
+            add(f"종합 지수 가중치 자의성 ({lab})", "엔트로피 가중 vs SHAP 가중 지수 순위 비교, 다음 시즌 예측력으로 최종 선택",
+                f"ρ = {c['entropy_vs_shap_spearman']:.2f}, 최종 = {c['final']}")
+    if nm:
+        add("볼배합 다양성 효과의 교란", "구위 지수·구종 수 통제 회귀 (HC1)",
+            f"엔트로피 → K% 표준화 계수 {nm['K%_coef_entropy']:+.4f} (p={nm['K%_p_entropy']:.3f})")
     t = pd.DataFrame(rows)
     save("validation_table", t)
     if sens:

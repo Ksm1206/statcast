@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from lib import PCFG, CAT, DIV, INK2, MUTED, SURFACE, load, meta, names, note, require_data, setup
+from lib import radar, PCFG, CAT, DIV, INK2, MUTED, SURFACE, load, meta, names, note, require_data, setup
 
 setup("🧭 유형 지도 · SHAP 요인 분석")
 require_data()
@@ -59,6 +59,15 @@ fig = go.Figure(go.Heatmap(z=prof.values, x=prof.columns, y=[f"유형 {t}" for t
                            colorbar=dict(title="Z", thickness=10), hovertemplate="%{y} · %{x}<br>Z %{z:.2f}<extra></extra>"))
 fig.update_layout(height=120 + 50 * len(prof), title="유형별 평균 (색 = 리그 대비 Z점수, 숫자 = 실제 평균)", xaxis=dict(tickangle=-35))
 st.plotly_chart(fig, width="stretch", config=PCFG)
+from scipy.stats import norm
+rc1, rc2 = st.columns([3, 2])
+with rc1:
+    # 유형별 평균 Z점수 → 백분위(0~100)로 변환해 레이더로 비교
+    rs = [(f"유형 {t}", list(norm.cdf(prof.loc[t].values.astype(float)) * 100), color[t]) for t in prof.index]
+    st.plotly_chart(radar(rs, list(prof.columns), "유형별 레이더 (리그 평균 = 50)", height=460), width="stretch", config=PCFG)
+with rc2:
+    note("각 축은 유형 평균의 Z점수를 정규분포 백분위로 바꾼 값입니다. 50이 리그 평균, 바깥으로 갈수록 그 지표가 높습니다. "
+         "(BB%·HardHit%처럼 낮을수록 좋은 지표도 '값이 높음' 방향 그대로 표시)")
 for t in prof.index:
     st.markdown(f"<span class='badge' style='border-left:4px solid {color[t]}'>유형 {t}</span> {cm.get('desc', {}).get(t, '')} · {cm.get('sizes', {}).get(t, 0)}명·시즌", unsafe_allow_html=True)
 pick = st.selectbox("유형 소속 선수 보기", types, format_func=lambda t: f"유형 {t}")

@@ -12,6 +12,44 @@ st.subheader("모형 검증 종합표")
 v = load("validation_table")
 st.dataframe(v, hide_index=True, width="stretch", height=min(40 + 36 * len(v), 800))
 
+st.subheader("회귀 진단 — 기대 ERA 모형 (LOWESS · Q-Q · Theil-Sen)")
+lm = meta("luck_meta")
+rs, lw, qq, cf = load("diag_resid"), load("diag_lowess"), load("diag_qq"), load("diag_coef")
+if len(rs):
+    c1, c2 = st.columns(2)
+    with c1:
+        fig = go.Figure()
+        fig.add_trace(go.Scattergl(x=rs["기대 ERA"], y=rs["ERA 잔차"], mode="markers", name="투수·시즌",
+                                   marker=dict(size=5, color=CAT[0], opacity=.35), hovertemplate="기대 %{x:.2f} · 잔차 %{y:+.2f}<extra></extra>"))
+        fig.add_trace(go.Scatter(x=lw["기대 ERA"], y=lw["LOWESS"], mode="lines", name="LOWESS", line=dict(color=CAT[1], width=3)))
+        fig.add_hline(y=0, line=dict(color=INK, width=1, dash="dot"))
+        fig.update_layout(title="잔차 vs 예측값 (LOWESS가 0선에 붙어 있으면 선형 가정 OK)", height=380,
+                          xaxis_title="기대 ERA", yaxis_title="ERA 잔차 (실제 − 기대)")
+        st.plotly_chart(fig, width="stretch", config=PCFG)
+    with c2:
+        fig = go.Figure()
+        fig.add_trace(go.Scattergl(x=qq["이론 분위수"], y=qq["표본 분위수"], mode="markers", name="잔차",
+                                   marker=dict(size=5, color=CAT[0], opacity=.5)))
+        m = float(np.nanmax(np.abs(qq[["이론 분위수"]].values)))
+        fig.add_trace(go.Scatter(x=[-m, m], y=[-m, m], mode="lines", name="정규분포", line=dict(color=INK, width=1, dash="dot")))
+        fig.update_layout(title="Q-Q 플롯 (점이 대각선을 벗어나면 꼬리가 두꺼움 = 이상치)", height=380,
+                          xaxis_title="정규분포 이론 분위수", yaxis_title="표준화 잔차 분위수")
+        st.plotly_chart(fig, width="stretch", config=PCFG)
+    c1, c2 = st.columns([2, 3])
+    with c1:
+        st.markdown("##### 회귀 방법별 표준화 계수")
+        st.dataframe(cf, hide_index=True, column_config={c: st.column_config.NumberColumn(format="%.3f") for c in ("OLS", "Huber", "Theil-Sen")})
+    with c2:
+        st.markdown("##### 방법 간 일치도")
+        st.dataframe(pd.DataFrame([
+            {"비교": "Huber vs OLS", "잔차 순위 상관 ρ": lm.get("huber_vs_ols_spearman"), "불운 상위 20명 겹침": lm.get("top20_overlap_huber_ols")},
+            {"비교": "Huber vs Theil-Sen", "잔차 순위 상관 ρ": lm.get("huber_vs_theilsen_spearman"), "불운 상위 20명 겹침": lm.get("top20_overlap_huber_ts")},
+            {"비교": "OLS vs Theil-Sen", "잔차 순위 상관 ρ": lm.get("ols_vs_theilsen_spearman"), "불운 상위 20명 겹침": None}]),
+            hide_index=True, column_config={"잔차 순위 상관 ρ": st.column_config.NumberColumn(format="%.3f"),
+                                            "불운 상위 20명 겹침": st.column_config.NumberColumn(format="%.2f")})
+        note(f"잔차 왜도 {lm.get('resid_skew', float('nan')):.2f}, 초과첨도 {lm.get('resid_excess_kurtosis', float('nan')):.2f}, "
+             f"LOWESS 최대 이탈 {lm.get('lowess_max_abs', float('nan')):.2f}. 세 방법의 결론이 같으면 회귀 방법 선택에 결과가 좌우되지 않는다는 뜻입니다.")
+
 st.subheader("맞대결 모델 비교 (검증 시즌 전체)")
 mm = meta("matchup_meta")
 c = load("matchup_model_comparison")

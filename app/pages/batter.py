@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from lib import (PCFG, CAT, DIV, GROUP_COLOR, INK, MUTED, PITCH_COLOR, SURFACE, fmt, grid_heatmap, ko, load, meta, names,
+from lib import (PCFG, profile_block, CAT, DIV, GROUP_COLOR, INK, MUTED, PITCH_COLOR, SURFACE, fmt, grid_heatmap, ko, load, meta, names,
                  note, percentile_bars, pick_player, require_data, setup)
 from mlbproj.analysis.spatial import grid_metric, lisa, rook_weights
 
@@ -88,6 +88,12 @@ if view == "요약":
             sig = "유의 (FDR 5%)" if l["유의(FDR 5%)"] else "유의하지 않음"
             st.markdown(f"**기대 성적** wOBA {l['wOBA']:.3f} − xwOBA {l['xwOBA']:.3f} = **{l['차이']:+.3f}** ({sig}). "
                         "−면 맞힌 공의 질에 비해 결과가 덜 나온 것(반등 후보).")
+
+    st.markdown("##### 프로필 레이더와 종합 지수")
+    profile_block("batter", bid, season, row,
+                  [("xwOBA", "xwOBA"), ("Barrel%", "배럴"), ("HardHit%", "강한 타구"), ("평균 타구속도", "타구속도"),
+                   ("BB%", "볼넷"), ("K%", "삼진 억제"), ("Chase%", "선구안"), ("배트 스피드", "배트 스피드")],
+                  c_row.iloc[0]["유형"] if len(c_row) else None)
 
 if view == "구종별":
     # ------------------------------------------------ 구종별

@@ -244,3 +244,101 @@ def grid_heatmap(g: pd.DataFrame, metric: str, title: str, min_n: int = 5, heigh
 
 def note(text: str):
     st.markdown(f"<div class='small-note'>{text}</div>", unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------- 레이더 차트
+def radar(series: list[tuple[str, list[float], str]], axes: list[str], title: str, height: int = 380):
+    """series: (이름, 0~100 값 목록, 색). 2개 이상이면 범례 표시."""
+    fig = go.Figure()
+    for name, vals, col in series:
+        v = [0 if (x is None or pd.isna(x)) else float(x) for x in vals]
+        fig.add_trace(go.Scatterpolar(r=v + v[:1], theta=axes + axes[:1], name=name, mode="lines+markers",
+                                      line=dict(color=col, width=2), marker=dict(size=6, color=col),
+                                      fill="toself", fillcolor=_alpha(col, 0.12),
+                                      hovertemplate="%{theta}: %{r:.0f}<extra>" + name + "</extra>"))
+    fig.update_layout(title=title, height=height, showlegend=len(series) > 1,
+                      polar=dict(bgcolor=SURFACE, radialaxis=dict(range=[0, 100], tickvals=[25, 50, 75], gridcolor=GRID,
+                                                                   tickfont=dict(color=MUTED, size=10), angle=90),
+                                 angularaxis=dict(gridcolor=GRID, tickfont=dict(color=INK2, size=11))),
+                      margin=dict(l=40, r=40, t=50, b=30))
+    return fig
+
+
+def _alpha(hex_color: str, a: float) -> str:
+    h = hex_color.lstrip("#")
+    if len(h) != 6:
+        return hex_color
+    return f"rgba({int(h[0:2], 16)},{int(h[2:4], 16)},{int(h[4:6], 16)},{a})"
+
+
+# ---------------------------------------------------------------- 볼배합 네트워크
+def network_figure(t: pd.DataFrame, types: list[str], nodes: pd.DataFrame, title: str, min_prob: float = 0.08):
+    """t: from/to/n/swing/whiff 전이표, nodes: pitch_type/pagerank. 원형 배치 + 화살표 간선."""
+    n = len(types)
+    ang = np.pi / 2 - 2 * np.pi * np.arange(n) / n
+    pos = {p: (np.cos(a), np.sin(a)) for p, a in zip(types, ang)}
+    out = t.groupby("from")["n"].sum()
+    fig = go.Figure()
+    ann = []
+    for _, e in t.iterrows():
+        a, b = e["from"], e["to"]
+        if a not in pos or b not in pos or a == b:
+            continue
+        prob = e["n"] / out.get(a, 1)
+        if prob < min_prob:
+            continue
+        (x0, y0), (x1, y1) = pos[a], pos[b]
+        dx, dy = x1 - x0, y1 - y0
+        L = np.hypot(dx, dy) or 1
+        ox, oy = -dy / L * 0.06, dx / L * 0.06          # 양방향 간선이 겹치지 않게 옆으로 띄움
+        sx, sy, ex, ey = x0 + dx * .16 + ox, y0 + dy * .16 + oy, x1 - dx * .16 + ox, y1 - dy * .16 + oy
+        wr = e["whiff"] / e["swing"] if e["swing"] > 0 else np.nan
+        ann.append(dict(x=ex, y=ey, ax=sx, ay=sy, xref="x", yref="y", axref="x", ayref="y", showarrow=True,
+                        arrowhead=2, arrowsize=1, arrowwidth=1 + 7 * prob, arrowcolor=_alpha(PITCH_COLOR.get(a, MUTED), .75)))
+        fig.add_trace(go.Scatter(x=[(sx + ex) / 2], y=[(sy + ey) / 2], mode="markers", marker=dict(size=14, color="rgba(0,0,0,0)"),
+                                 hovertemplate=f"{ko(a)} → {ko(b)}<br>전이 확률 {prob * 100:.0f}% ({int(e['n'])}회)"
+                                               f"<br>도착 공 헛스윙률 {'' if pd.isna(wr) else f'{wr * 100:.0f}%'}<extra></extra>",
+                                 showlegend=False))
+    pr = nodes.set_index("pitch_type")["pagerank"]
+    self_p = {p: (t[(t["from"] == p) & (t["to"] == p)]["n"].sum() / out.get(p, 1)) for p in types}
+    fig.add_trace(go.Scatter(
+        x=[pos[p][0] for p in types], y=[pos[p][1] for p in types], mode="markers+text",
+        text=[f"{ko(p)}<br>{pr.get(p, 0):.2f}" for p in types], textposition="middle center",
+        textfont=dict(color=[INK if PITCH_COLOR.get(p) in ("#eda100", "#a8a69e") else "#ffffff" for p in types], size=11),
+        marker=dict(size=[34 + 90 * pr.get(p, 0) for p in types], color=[PITCH_COLOR.get(p, MUTED) for p in types],
+                    line=dict(color=SURFACE, width=2)),
+        customdata=[[pr.get(p, 0), self_p[p] * 100] for p in types],
+        hovertemplate="%{text}<br>PageRank %{customdata[0]:.3f}<br>같은 구종 연속 %{customdata[1]:.0f}%<extra></extra>",
+        showlegend=False))
+    fig.update_layout(title=title, height=420, annotations=ann, xaxis=dict(visible=False, range=[-1.45, 1.45]),
+                      yaxis=dict(visible=False, range=[-1.35, 1.35], scaleanchor="x"), margin=dict(l=10, r=10, t=50, b=10))
+    return fig
+
+
+def profile_block(kind: str, pid: int, season: int, row: pd.Series, axes: list[tuple[str, str]], type_label: str | None):
+    """레이더(선수 vs 같은 유형 평균) + 종합 지수 카드."""
+    cl = load(f"{kind}_clusters")
+    t = load(f"{kind}_season")
+    comp = load(f"composite_{kind}")
+    cm = meta("composite_meta").get(kind, {})
+    names_ = [a for _, a in axes]
+    pv = [row.get(f"pct_{m}") for m, _ in axes]
+    series = [(row["name"], pv, CAT[0])]
+    if type_label is not None and len(cl):
+        mem = cl[(cl["season"] == season) & (cl["유형"] == type_label)][[kind]]
+        tt = t[(t["season"] == season)].merge(mem, on=kind)
+        series.append((f"유형 {type_label} 평균", [tt[f"pct_{m}"].mean() if f"pct_{m}" in tt else np.nan for m, _ in axes], CAT[1]))
+    c1, c2 = st.columns([3, 2])
+    c1.plotly_chart(radar(series, names_, "프로필 레이더 (리그 백분위, 바깥일수록 좋음)"), width="stretch", config=PCFG)
+    with c2:
+        r = comp[(comp[kind] == pid) & (comp["season"] == season)] if len(comp) else comp
+        lab = "종합 투수 지수" if kind == "pitcher" else "종합 타자 지수"
+        if len(r):
+            r = r.iloc[0]
+            st.metric(lab, f"{r['종합 지수']:.0f}점", f"시즌 상위 {100 - r['시즌 내 백분위']:.0f}%", delta_color="off")
+            st.markdown(f"<span class='badge'>엔트로피 지수 {r['엔트로피 지수']:.0f}</span>"
+                        f"<span class='badge'>SHAP 지수 {r['SHAP 지수']:.0f}</span>", unsafe_allow_html=True)
+            note(f"최종 지수는 다음 시즌 예측력이 더 높았던 <b>{cm.get('final', '')}</b>를 사용합니다. 0~100점(그 시즌 규정 표본 최하 0, 최고 100). "
+                 "자세한 가중치는 '종합 지수' 메뉴.")
+        else:
+            st.info(f"{lab}는 규정 표본 선수만 계산됩니다.")
