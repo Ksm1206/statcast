@@ -51,7 +51,7 @@ if view == "요약":
         lp = load("luck_pitcher")
         e = era_[(era_["pitcher"] == pid) & (era_["season"] == season)]
         l = lp[(lp["pitcher"] == pid) & (lp["season"] == season)]
-        st.markdown("##### 운 vs 실력 요약")
+        st.markdown("##### 기대 성적 갭")
         if len(e):
             e = e.iloc[0]
             st.markdown(f"- 실제 ERA **{e['ERA']:.2f}** vs 기대 ERA(삼진·볼넷·땅볼·강한 타구로 추정) **{e['기대 ERA']:.2f}** → 차이 **{e['ERA 잔차']:+.2f}**")
@@ -59,7 +59,7 @@ if view == "요약":
             l = l.iloc[0]
             sig = "통계적으로 유의 (FDR 5%)" if l["유의(FDR 5%)"] else "유의하지 않음"
             st.markdown(f"- 허용 wOBA **{l['wOBA']:.3f}** vs xwOBA **{l['xwOBA']:.3f}** → 차이 **{l['차이']:+.3f}** ({sig})")
-            st.markdown("- 차이가 양수면 타구 질보다 결과가 나빴던 것(불운 → 반등 후보), 음수면 운이 좋았던 것")
+            st.markdown("- 차이가 양수면 타구 질보다 결과가 나빴던 것(불운 → 반등 후보), 음수면 기대보다 결과가 좋았던 것(하락 주의)")
         st.markdown("##### 기본 기록")
         show = {k: row.get(k) for k in ("경기", "선발", "승", "패", "세이브", "IP", "PA", "pitches", "HR") if k in row}
         st.dataframe(pd.DataFrame([show]).astype(object).where(pd.notna(pd.DataFrame([show])), "–").rename(columns={"IP": "이닝", "pitches": "투구 수", "HR": "피홈런"}), hide_index=True)
@@ -137,7 +137,7 @@ if view == "구종별 성적":
         perf[c] = perf[c] * 100
     pc.update({c: st.column_config.NumberColumn(format="%.1f") for c in ("평균 타구속도", "평균 발사각", "RV/100", "RV")})
     st.dataframe(perf.rename(columns={"pitch_type": "구종", "pitches": "투구"}), hide_index=True, column_config=pc, width="stretch")
-    note("RV/100: 100구당 실점 억제량(Statcast delta_run_exp 기반, +가 투수에게 좋음). 결과(타율·wOBA)와 기대값(xBA·xwOBA) 차이가 크면 운의 영향.")
+    note("RV/100: 100구당 실점 억제량(Statcast delta_run_exp 기반, +가 투수에게 좋음). 결과(타율·wOBA)와 기대값(xBA·xwOBA) 차이가 크면 결과가 과정과 어긋난 것 영향.")
 
 if view == "투구 위치":
     # ------------------------------------------------ 위치

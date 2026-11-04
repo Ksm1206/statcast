@@ -47,7 +47,14 @@ cards = [("타율", "AVG", "rate"), ("출루율", "OBP", "rate"), ("장타율", 
 cols = st.columns(len(cards))
 for c, (lab, key, k) in zip(cols, cards):
     v = row.get(key)
-    c.metric(lab, "–" if v is None or pd.isna(v) else (f"{int(v)}" if k == "int" else fmt(v, k, 1)))
+    c.metric(lab, "–" if v is None or pd.isna(v) else (f"{int(round(v))}" if k == "int" else fmt(v, k, 1)))
+notes = []
+if row.get("wRC+ 출처") == "자체 계산":
+    notes.append("wRC+는 FanGraphs 값을 받지 못해 wOBA로 직접 계산한 추정치입니다(구장 보정 없음, 100 = 리그 평균).")
+if pd.isna(row.get("fWAR")):
+    notes.append("fWAR은 FanGraphs에서만 제공되어, 자동 수집이 막히면 비어 있습니다.")
+if notes:
+    note(" ".join(notes))
 
 st.divider()
 view = st.segmented_control("보기", ["요약", "구종별", "존 약점", "구속·카운트·좌우", "스프레이·유사 타자"], default="요약", key="view_batter")
@@ -79,7 +86,7 @@ if view == "요약":
         if len(l):
             l = l.iloc[0]
             sig = "유의 (FDR 5%)" if l["유의(FDR 5%)"] else "유의하지 않음"
-            st.markdown(f"**운 지표** wOBA {l['wOBA']:.3f} − xwOBA {l['xwOBA']:.3f} = **{l['차이']:+.3f}** ({sig}). "
+            st.markdown(f"**기대 성적 갭** wOBA {l['wOBA']:.3f} − xwOBA {l['xwOBA']:.3f} = **{l['차이']:+.3f}** ({sig}). "
                         "−면 맞힌 공의 질에 비해 결과가 덜 나온 것(반등 후보).")
 
 if view == "구종별":

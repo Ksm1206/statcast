@@ -73,8 +73,8 @@ def main():
         add("다중검정 (수백 명 동시 검정)", "Benjamini-Hochberg FDR 5%",
             f"투수 {lm['pitcher_naive_sig']}→{lm['pitcher_sig']}명, 타자 {lm['batter_naive_sig']}→{lm['batter_sig']}명 (보정 전→후)")
         if lm.get("luck_persistence_b") is not None:
-            add("'운' 지표가 실은 실력일 가능성", "wOBA−xwOBA의 연도 간 상관 vs K% 연도 간 상관",
-                f"운 r = {lm['luck_persistence_b']:.2f} / K% r = {lm.get('skill_persistence_b_K') or float('nan'):.2f}")
+            add("기대 성적 갭이 일시적인가", "wOBA−xwOBA의 연도 간 상관 vs K% 연도 간 상관",
+                f"갭 r = {lm['luck_persistence_b']:.2f} / K% r = {lm.get('skill_persistence_b_K') or float('nan'):.2f}")
     if mm:
         add("맞대결 표본 희소성", "실제 기록 대신 특성 기반 모델",
             f"가능한 쌍 ≈ {mm['possible_pairs_per_season']:,}/시즌 vs 타석 ≈ {mm['pa_per_season']:,.0f}/시즌")

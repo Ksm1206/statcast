@@ -1,9 +1,9 @@
-"""5단계: 운 vs 실력.
+"""5단계: 기대 성적 갭 (결과 vs 과정).
 
 1) wOBA - xwOBA (타석 단위 차이)의 평균 → 정규근사 z, Newey-West(HAC) z, Ljung-Box, BH-FDR
 2) Huber 로버스트 회귀: ERA ~ K% + BB% + GB% + HardHit% → 잔차 = 수비·운·시퀀싱 요인
    OLS 결과와 순위 상관으로 강건성 확인
-3) 연도 간 지속성: 운 지표는 다음 해로 이어지지 않아야 함 (실력 지표 K%와 비교)
+3) 연도 간 지속성: 갭은 다음 해로 이어지지 않아야 함 (실력 지표 K%와 비교)
 """
 from __future__ import annotations
 

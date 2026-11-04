@@ -206,24 +206,55 @@ def collect_people(ids: list[int]) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------- FanGraphs (선택)
+FG_API = ("https://www.fangraphs.com/api/leaders/major-league/data?age=&pos=all&stats={stats}&lg=all&qual=0"
+          "&season={s}&season1={s}&startdate=&enddate=&month=0&hand=&team=0&pageitems=2000000&pagenum=1"
+          "&ind=0&rost=0&players=&type=8&postseason=&sortdir=default&sortstat=WAR")
+FG_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                            "Chrome/130.0 Safari/537.36", "Accept": "application/json",
+              "Referer": "https://www.fangraphs.com/leaders/major-league"}
+
+
+def _fg_api(season: int, kind: str) -> pd.DataFrame:
+    """FanGraphs 리더보드가 쓰는 JSON API. 결과에 MLBAM ID(xMLBAMID)가 들어 있어 바로 매칭 가능."""
+    url = FG_API.format(stats="pit" if kind == "pitching" else "bat", s=season)
+    r = requests.get(url, headers=FG_HEADERS, timeout=120)
+    r.raise_for_status()
+    rows = r.json().get("data", [])
+    df = pd.DataFrame(rows)
+    if "xMLBAMID" in df:
+        df["MLBAMID"] = pd.to_numeric(df["xMLBAMID"], errors="coerce")
+    return df
+
+
 def collect_fangraphs(season: int) -> None:
-    """pybaseball로 FanGraphs WAR를 시도. 막히면 data/external에 CSV를 직접 넣으면 됨."""
+    """FanGraphs fWAR·wRC+ 등 (선택). JSON API → pybaseball 순서로 시도하고, 둘 다 막히면 건너뜀.
+    막혔을 때는 리더보드 CSV를 data/external 에 직접 넣으면 됨."""
     for kind in ("pitching", "batting"):
         out = EXTERNAL / f"fangraphs_{kind}_{season}.csv"
-        if out.exists():
+        if out.exists() and out.stat().st_size > 100:
             continue
+        df = pd.DataFrame()
         try:
-            import pybaseball as pb
-
-            fn = pb.pitching_stats if kind == "pitching" else pb.batting_stats
-            df = fn(season, qual=0)
-            ids = pb.playerid_reverse_lookup(df["IDfg"].tolist(), key_type="fangraphs")
-            df = df.merge(ids[["key_fangraphs", "key_mlbam"]], left_on="IDfg",
-                          right_on="key_fangraphs", how="left").rename(columns={"key_mlbam": "MLBAMID"})
-            df.to_csv(out, index=False)
-            print(f"[fangraphs {kind} {season}] {len(df):,}명")
+            df = _fg_api(season, kind)
         except Exception as e:  # noqa: BLE001
-            print(f"[fangraphs {kind} {season}] 건너뜀 (선택 항목): {e}")
+            print(f"[fangraphs {kind} {season}] API 실패: {e}")
+        if df.empty or "MLBAMID" not in df:
+            try:
+                import pybaseball as pb
+
+                fn = pb.pitching_stats if kind == "pitching" else pb.batting_stats
+                df = fn(season, qual=0)
+                ids = pb.playerid_reverse_lookup(df["IDfg"].tolist(), key_type="fangraphs")
+                df = df.merge(ids[["key_fangraphs", "key_mlbam"]], left_on="IDfg",
+                              right_on="key_fangraphs", how="left").rename(columns={"key_mlbam": "MLBAMID"})
+            except Exception as e:  # noqa: BLE001
+                print(f"[fangraphs {kind} {season}] pybaseball 실패: {e}")
+                df = pd.DataFrame()
+        if len(df) and "MLBAMID" in df:
+            df.to_csv(out, index=False)
+            print(f"[fangraphs {kind} {season}] {len(df):,}명 (WAR {'있음' if 'WAR' in df else '없음'})")
+        else:
+            print(f"[fangraphs {kind} {season}] 받지 못함 → fWAR 없이 진행 (wRC+는 자체 계산)")
 
 
 def main(argv=None):

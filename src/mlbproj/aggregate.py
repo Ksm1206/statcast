@@ -154,9 +154,15 @@ def batter_season(df: pd.DataFrame, season: int) -> pd.DataFrame:
         t[f"{c}%"] = t["batter"].map(dirs[c]) if c in dirs else np.nan
     t["stand"] = t["batter"].map(reg.groupby("batter")["stand"].agg(lambda s: "S" if s.nunique() > 1 else s.iloc[0]))
     t["age"] = t["batter"].map(reg.groupby("batter")["age_bat"].median())
+    # 리그 wOBA (정규시즌 전체 타석)
+    pa_rows = reg[reg["pa_end"] & reg["woba_denom"].notna()]
+    lg_woba = pa_rows["woba_value"].sum() / max(pa_rows["woba_denom"].sum(), 1)
+    lg_r_pa = np.nan
     api_f = RAW / f"mlbapi_hitting_{season}.parquet"
     if api_f.exists():
         api = pd.read_parquet(api_f)
+        if {"runs", "plateAppearances"} <= set(api.columns):
+            lg_r_pa = pd.to_numeric(api["runs"], errors="coerce").sum() / pd.to_numeric(api["plateAppearances"], errors="coerce").sum()
         ren = {"name": "name_api", "team": "팀", "gamesPlayed": "경기", "avg": "AVG", "obp": "OBP", "slg": "SLG",
                "ops": "OPS", "homeRuns": "홈런", "rbi": "타점", "runs": "득점", "stolenBases": "도루", "hits": "안타"}
         api = api.rename(columns=ren)
@@ -170,6 +176,18 @@ def batter_season(df: pd.DataFrame, season: int) -> pd.DataFrame:
     fg = _load_fg(season, "batting")
     if fg is not None:
         t = t.merge(fg, left_on="batter", right_on="player_id", how="left").drop(columns="player_id")
+    # 자체 wRC+ (FanGraphs 값이 없을 때): 100 × (wRAA/PA + 리그 R/PA) / 리그 R/PA, wOBA 스케일 1.24, 구장 보정 없음
+    WOBA_SCALE = 1.24
+    if pd.notna(lg_r_pa) and lg_r_pa > 0:
+        calc = 100 * (((t["wOBA"] - lg_woba) / WOBA_SCALE) + lg_r_pa) / lg_r_pa
+    else:
+        calc = pd.Series(np.nan, index=t.index)
+    if "wRC+" in t and t["wRC+"].notna().any():
+        t["wRC+ 출처"] = np.where(t["wRC+"].notna(), "FanGraphs", "자체 계산")
+        t["wRC+"] = t["wRC+"].fillna(calc)
+    else:
+        t["wRC+"] = calc
+        t["wRC+ 출처"] = "자체 계산"
     t["wOBA-xwOBA"] = t["wOBA"] - t["xwOBA"]
     t["season"] = season
     t["qualified"] = t["PA"] >= MIN_PA_BATTER

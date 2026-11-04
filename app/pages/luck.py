@@ -5,12 +5,12 @@ import streamlit as st
 
 from lib import PCFG, CAT, INK, SURFACE, load, meta, names, note, require_data, setup
 
-setup("🎲 운 vs 실력")
+setup("📈 기대 성적 갭 — 결과는 과정을 따라오는가")
 require_data()
 lm = meta("luck_meta")
 
 st.markdown("""
-**질문:** 성적이 좋았던(나빴던) 이유가 실력인가, 운인가?
+**질문:** 올해 성적이 타구의 질(과정)에 비해 지나치게 좋거나 나빴던 선수는 누구이고, 그 차이는 다음 시즌까지 이어지는가?
 **방법:** 타석마다 *실제 결과 가치(wOBA)* 와 *타구 속도·발사각으로 본 기대 가치(xwOBA)* 의 차이를 평균냅니다.
 경기 순서에 따른 자기상관을 **Ljung-Box**로 확인하고 **Newey-West(HAC)** 표준오차로 보정, 수백 명을 동시에 검정하므로 **Benjamini-Hochberg FDR**로 다시 보정합니다.
 """)
@@ -19,7 +19,7 @@ if lm:
     c[0].metric("유의한 투수 (보정 전 → 후)", f"{lm['pitcher_naive_sig']} → {lm['pitcher_sig']}", f"/ {lm['pitcher_n']}명·시즌", delta_color="off")
     c[1].metric("유의한 타자 (보정 전 → 후)", f"{lm['batter_naive_sig']} → {lm['batter_sig']}", f"/ {lm['batter_n']}명·시즌", delta_color="off")
     if lm.get("luck_persistence_b") is not None:
-        c[2].metric("운 지표 연도 간 상관 (타자)", f"{lm['luck_persistence_b']:.2f}", "낮을수록 '운'", delta_color="off")
+        c[2].metric("갭의 연도 간 상관 (타자)", f"{lm['luck_persistence_b']:.2f}", "낮을수록 일시적", delta_color="off")
     if lm.get("skill_persistence_b_K") is not None:
         c[3].metric("K% 연도 간 상관 (실력 비교용)", f"{lm['skill_persistence_b_K']:.2f}", delta_color="off")
 
@@ -60,7 +60,7 @@ if key == "batter":
 else:
     c1.markdown("##### 다음 시즌 반등 후보 (허용 결과가 기대보다 나빴음)")
     c1.dataframe(d.sort_values("차이", ascending=False).head(15)[cols].rename(columns={"name": "선수"}), hide_index=True, column_config=cfg)
-    c2.markdown("##### 하락 주의 (운이 좋았음)")
+    c2.markdown("##### 하락 주의 (허용 결과가 기대보다 좋았음)")
     c2.dataframe(d.sort_values("차이").head(15)[cols].rename(columns={"name": "선수"}), hide_index=True, column_config=cfg)
 
 if key == "pitcher":
