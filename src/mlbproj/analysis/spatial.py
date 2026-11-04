@@ -55,7 +55,9 @@ def lisa(y: np.ndarray, W: np.ndarray, perms: int = 499, seed: int = 0, alpha: f
         if nb[i] == 0:
             continue
         others = np.delete(z, i)
-        sims = np.array([z[i] * rng.choice(others, nb[i], replace=False).mean() for _ in range(perms)])
+        # 조건부 순열: 이웃 수만큼 다른 칸 값을 무작위로 뽑아 평균 (벡터화)
+        idx = np.argsort(rng.random((perms, n - 1)), axis=1)[:, : nb[i]]
+        sims = z[i] * others[idx].mean(axis=1)
         p[i] = (1 + (np.abs(sims) >= abs(Ii[i])).sum()) / (perms + 1)
     q = bh_fdr(p)
     typ = np.where(z > 0, np.where(lag > 0, "HH", "HL"), np.where(lag > 0, "LH", "LL"))

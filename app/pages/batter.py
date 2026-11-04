@@ -7,6 +7,26 @@ from lib import (CAT, DIV, GROUP_COLOR, INK, MUTED, PITCH_COLOR, SURFACE, fmt, g
                  note, percentile_bars, pick_player, require_data, setup)
 from mlbproj.analysis.spatial import grid_metric, lisa, rook_weights
 
+@st.cache_data(show_spinner=False)
+def league_xwoba_by_pitch(season):
+    vp = load("batter_vs_pitch")
+    d = vp[(vp["season"] == season) & vp["xwOBA"].notna()]
+    w = d["PA"].clip(lower=0)
+    return (d["xwOBA"] * w).groupby(d["key"]).sum() / w.groupby(d["key"]).sum()
+
+
+@st.cache_data(show_spinner=False)
+def lisa_cells(bid, season, grp, mk):
+    bg = load("batter_grid")
+    g = bg[(bg["batter"] == bid) & (bg["season"] == season)]
+    gg = g if grp == "전체" else g[g["pitch_group"] == grp]
+    mm = grid_metric(gg, mk, min_n=6)
+    if len(mm) < 12:
+        return None
+    W = rook_weights(list(zip(mm["gx"], mm["gz"])))
+    return pd.concat([mm[["gx", "gz"]].reset_index(drop=True), lisa(mm["value"].values, W, perms=299)], axis=1)
+
+
 setup("🏏 타자 리포트")
 require_data()
 bid, season, row = pick_player("batter", "b")
@@ -67,7 +87,7 @@ with c1:
     fig.add_trace(go.Bar(x=[ko(p) for p in v["key"]], y=v["xwOBA"], marker=dict(color=[PITCH_COLOR.get(p, MUTED) for p in v["key"]], line=dict(color=SURFACE, width=2)),
                          text=[f"{x:.3f}" if pd.notna(x) else "" for x in v["xwOBA"]], textposition="outside",
                          customdata=v["PA"], hovertemplate="%{x}: xwOBA %{y:.3f}<br>%{customdata}타석<extra></extra>"))
-    lg = vp[(vp["season"] == season)].groupby("key").apply(lambda d: np.average(d["xwOBA"].fillna(0), weights=d["PA"].clip(0)) if d["PA"].sum() else np.nan, include_groups=False)
+    lg = league_xwoba_by_pitch(season)
     fig.add_trace(go.Scatter(x=[ko(p) for p in v["key"]], y=[lg.get(p) for p in v["key"]], mode="markers", name="리그 평균",
                              marker=dict(symbol="line-ew", size=26, line=dict(color=INK, width=2))))
     fig.update_layout(title="구종별 xwOBA (선 = 리그 평균)", height=330, yaxis_title="xwOBA", showlegend=False)
@@ -93,12 +113,7 @@ with c1:
     show_lisa = st.checkbox("LISA 핫스팟 표시 (HH = 높은 칸끼리 뭉침, LL = 낮은 칸끼리 뭉침)", value=True)
     gg = g if grp == "전체" else g[g["pitch_group"] == grp]
     mk = {"헛스윙률": "whiff", "타구 xwOBA": "xwoba", "스윙률": "swing"}[metric]
-    lt = None
-    if show_lisa and len(gg):
-        mm = grid_metric(gg, mk, min_n=6)
-        if len(mm) >= 12:
-            W = rook_weights(list(zip(mm["gx"], mm["gz"])))
-            lt = pd.concat([mm[["gx", "gz"]].reset_index(drop=True), lisa(mm["value"].values, W, perms=299)], axis=1)
+    lt = lisa_cells(bid, season, grp, mk) if show_lisa and len(gg) else None
     st.plotly_chart(grid_heatmap(gg, mk, f"{grp} · {metric}", lisa_types=lt), width="stretch")
 with c2:
     vz = load("batter_vs_zone")
