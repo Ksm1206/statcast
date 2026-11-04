@@ -211,4 +211,4 @@ if len(m):
 if len(c):
     c = c.iloc[0]
     msg = f"가장 뚜렷한 변화점: **{pd.to_datetime(c['변화 시점']):%m월 %d일}** 전후 {c['이전 평균']:.1f} → {c['이후 평균']:.1f} mph ({c['변화량']:+.1f}, t = {c['t']:.1f})"
-    (st.error if c["구속 급락 경보"] else st.info)(msg + ("  ⚠ 구속 급락 경보 (−1mph 이상, |t| ≥ 3)" if c["구속 급락 경보"] else ""))
+    (st.error if c["구속 급락 경보"] else st.info)(msg + ("  ⚠ 구속 급락 경보 (−1.5mph 이상, t ≤ −4)" if c["구속 급락 경보"] else ""))

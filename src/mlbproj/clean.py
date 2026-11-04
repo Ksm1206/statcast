@@ -53,9 +53,25 @@ def _to_numpy_dtypes(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def load_and_clean(season: int) -> pd.DataFrame:
+def batter_zone_table(seasons: list[int]) -> pd.DataFrame:
+    """타자별 스트라이크존 상·하단을 전 시즌 중앙값으로 고정.
+    Statcast의 sz_top/sz_bot 산출 방식이 시즌마다 달라질 수 있어(특히 2025년부터 ABS 기준 존),
+    그대로 쓰면 '존 안/밖' 판정이 데이터 정의 변화 때문에 바뀌는 착시가 생김 → 시즌 간 같은 존으로 비교."""
+    parts = []
+    for s in seasons:
+        d = pd.read_parquet(RAW / f"statcast_{s}.parquet", columns=["batter", "sz_top", "sz_bot"])
+        parts.append(_to_numpy_dtypes(d.assign(game_date="2000-01-01")).drop(columns="game_date"))
+    z = pd.concat(parts).groupby("batter")[["sz_top", "sz_bot"]].median()
+    return z
+
+
+def load_and_clean(season: int, zone: pd.DataFrame | None = None) -> pd.DataFrame:
     df = pd.read_parquet(RAW / f"statcast_{season}.parquet")
     df = _to_numpy_dtypes(df)
+    if zone is not None and len(zone):
+        df["sz_top_raw"], df["sz_bot_raw"] = df["sz_top"], df["sz_bot"]
+        df["sz_top"] = df["batter"].map(zone["sz_top"]).fillna(df["sz_top"]).astype("float32")
+        df["sz_bot"] = df["batter"].map(zone["sz_bot"]).fillna(df["sz_bot"]).astype("float32")
     df = df[df["pitch_type"].notna() & df["plate_x"].notna()].copy()
     df["is_post"] = df["game_type"].isin(POST_TYPES)
     df = df[df["game_type"].isin({"R"} | POST_TYPES)]

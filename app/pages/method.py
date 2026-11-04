@@ -58,7 +58,7 @@ a = cp[cp["구속 급락 경보"]].copy()
 a["투수"] = a["pitcher"].map(names("pitcher"))
 st.dataframe(a.sort_values("변화량")[["투수", "season", "변화 시점", "이전 평균", "이후 평균", "변화량", "t", "경기 수"]], hide_index=True,
              column_config={c: st.column_config.NumberColumn(format="%.2f") for c in ("이전 평균", "이후 평균", "변화량", "t")})
-note("경기별 패스트볼 평균 구속에서 평균이 가장 크게 바뀌는 지점을 찾고(이분 분할 t 통계량), −1mph 이상 하락 & t ≤ −3이면 경보.")
+note("경기별 패스트볼 평균 구속에서 평균이 가장 크게 바뀌는 지점을 찾고(이분 분할 t 통계량), −1.5mph 이상 하락 & t ≤ −4이면 경보.")
 
 st.subheader("데이터 출처와 한계")
 st.markdown("""

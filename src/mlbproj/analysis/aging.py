@@ -70,7 +70,7 @@ def changepoints(gv: pd.DataFrame, min_seg: int = 5) -> pd.DataFrame:
             continue
         rows.append((p, s, n, g["game_date"].iloc[k], x[:k].mean(), x[k:].mean(), x[k:].mean() - x[:k].mean(), t))
     out = pd.DataFrame(rows, columns=["pitcher", "season", "경기 수", "변화 시점", "이전 평균", "이후 평균", "변화량", "t"])
-    out["구속 급락 경보"] = (out["변화량"] <= -1.0) & (out["t"] <= -3)
+    out["구속 급락 경보"] = (out["변화량"] <= -1.5) & (out["t"] <= -4)  # 최대 t를 고르므로 기준을 엄격하게
     return out
 
 

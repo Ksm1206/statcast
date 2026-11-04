@@ -23,7 +23,10 @@ show = its.copy()
 st.dataframe(show, hide_index=True, column_config={
     "ABS 효과(%p)": st.column_config.NumberColumn(format="%+.2f"), "표준오차": st.column_config.NumberColumn(format="%.2f"),
     "p": st.column_config.NumberColumn(format="%.4f"), "q_FDR": st.column_config.NumberColumn(format="%.4f"),
-    "도입 전 평균": st.column_config.NumberColumn(format="%.2f"), "2026": st.column_config.NumberColumn(format="%.2f")})
+    **{c: st.column_config.NumberColumn(format="%.2f") for c in show.columns if c not in ("지표", "p", "q_FDR", "추세 없는 p", "ABS 효과(%p)", "표준오차")},
+    "추세 없는 p": st.column_config.NumberColumn(format="%.4f")})
+note("추세를 넣은 모형과 뺀 모형의 결론이 같으면 효과가 견고합니다. 도입 후 시즌이 1개뿐이라 추세 추정에 민감할 수 있어 두 모형을 함께 봅니다. "
+     "존 판정은 타자별로 전 시즌 공통 존(중앙값)을 써서, Statcast 존 정의가 시즌마다 바뀐 영향을 제거했습니다.")
 
 m = load("abs_monthly_rates")
 metric = st.selectbox("월별 추이 지표", [c for c in m.columns if c not in ("season", "month")], index=3)

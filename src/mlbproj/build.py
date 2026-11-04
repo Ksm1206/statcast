@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from . import aggregate as A
-from .clean import load_and_clean
+from .clean import batter_zone_table, load_and_clean
 from .config import GRID_N, GRID_X, GRID_Z, INTERIM, PROCESSED, RAW, SEASONS
 
 INTERIM_TABLES = {"pa", "pitcher_game_velo", "abs_pitcher_edge"}
@@ -80,12 +80,14 @@ def main(seasons=None):
     seasons = seasons or sorted(int(f.stem.split("_")[1]) for f in RAW.glob("statcast_*.parquet"))
     if not seasons:
         raise SystemExit("data/raw 에 statcast_*.parquet 가 없습니다. 먼저 수집을 실행하세요.")
+    print("[build] 타자별 고정 스트라이크존 계산 (시즌 간 존 정의 변화 보정)")
+    zone = batter_zone_table(seasons)
     bucket: dict[str, list] = {}
     put = lambda k, v: bucket.setdefault(k, []).append(v)  # noqa: E731
     for s in seasons:
         t0 = time.time()
         print(f"[build {s}] 정리 중...")
-        df = load_and_clean(s)
+        df = load_and_clean(s, zone)
         print(f"  {len(df):,}구 (정규 {(~df['is_post']).sum():,} / 포스트 {df['is_post'].sum():,})")
         ps = A.pitcher_season(df, s)
         bs = A.batter_season(df, s)

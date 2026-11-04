@@ -43,8 +43,11 @@ def main():
         y = m[k]
         ok = y.notna()
         fit = sm.OLS(y[ok], X[ok]).fit(cov_type="HAC", cov_kwds={"maxlags": 3})
+        fit0 = sm.OLS(y[ok], X[ok].drop(columns="t")).fit(cov_type="HAC", cov_kwds={"maxlags": 3})
+        prev = m["season"] == ABS_SEASON - 1
         its.append({"지표": k, "ABS 효과(%p)": fit.params["post"] * 100, "표준오차": fit.bse["post"] * 100,
-                    "p": fit.pvalues["post"], "도입 전 평균": y[m["post"] == 0].mean() * 100,
+                    "p": fit.pvalues["post"], "추세 없는 모형(%p)": fit0.params["post"] * 100, "추세 없는 p": fit0.pvalues["post"],
+                    "도입 전 평균": y[m["post"] == 0].mean() * 100, f"{ABS_SEASON - 1}": y[prev].mean() * 100,
                     "2026": y[m["post"] == 1].mean() * 100})
     its = pd.DataFrame(its)
     its["q_FDR"] = bh_fdr(its["p"].values)
