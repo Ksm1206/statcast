@@ -1,0 +1,5 @@
+# 데이터 수집·분석 파이프라인용 (GitHub Actions / 로컬)
+-r requirements.txt
+statsmodels>=0.14
+pybaseball>=2.2.7
+requests>=2.31
