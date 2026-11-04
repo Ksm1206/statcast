@@ -1,4 +1,4 @@
-"""5단계: 기대 성적 갭 (결과 vs 과정).
+"""5단계: 기대 성적 (결과 vs 과정).
 
 1) wOBA - xwOBA (타석 단위 차이)의 평균 → 정규근사 z, Newey-West(HAC) z, Ljung-Box, BH-FDR
 2) Huber 로버스트 회귀: ERA ~ K% + BB% + GB% + HardHit% → 잔차 = 수비·운·시퀀싱 요인

@@ -51,7 +51,7 @@ if view == "요약":
         lp = load("luck_pitcher")
         e = era_[(era_["pitcher"] == pid) & (era_["season"] == season)]
         l = lp[(lp["pitcher"] == pid) & (lp["season"] == season)]
-        st.markdown("##### 기대 성적 갭")
+        st.markdown("##### 기대 성적")
         if len(e):
             e = e.iloc[0]
             st.markdown(f"- 실제 ERA **{e['ERA']:.2f}** vs 기대 ERA(삼진·볼넷·땅볼·강한 타구로 추정) **{e['기대 ERA']:.2f}** → 차이 **{e['ERA 잔차']:+.2f}**")

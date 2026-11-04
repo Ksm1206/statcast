@@ -36,10 +36,13 @@ pq = ps[(ps["season"] == season) & ps["qualified"]].sort_values("pitches", ascen
 bq = bs[(bs["season"] == season) & bs["qualified"]].sort_values("PA", ascending=False)
 st.markdown("##### 투수")
 c1, c2 = st.columns([2, 3])
-pid = team_player_select(pq, "pitcher", "mp", "투수", c1, c2)
+pid = team_player_select(pq, "pitcher", "mp", "투수", c1, c2, stop=False)
 st.markdown("##### 타자")
 c1, c2 = st.columns([2, 3])
-bid = team_player_select(bq, "batter", "mb", "타자", c1, c2)
+bid = team_player_select(bq, "batter", "mb", "타자", c1, c2, stop=False)
+if pid is None or bid is None:
+    st.info("투수와 타자의 구단을 각각 선택하면 선수 목록이 나옵니다.")
+    st.stop()
 p_throws = pq.set_index("pitcher").loc[pid, "p_throws"]
 b_stand = bq.set_index("batter").loc[bid, "stand"]
 stand = ("L" if p_throws == "R" else "R") if b_stand == "S" else b_stand

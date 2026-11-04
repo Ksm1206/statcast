@@ -95,7 +95,7 @@ def names(kind: str) -> dict[int, str]:
     return t.sort_values("season").groupby(kind)["name"].last().to_dict()
 
 
-ALL_TEAMS = "전체 구단"
+ALL_TEAMS = "전체 구단"  # 내부용 (선택지에는 표시하지 않음)
 
 
 def team_list(sub: pd.DataFrame) -> list[str]:
@@ -112,21 +112,22 @@ def filter_team(sub: pd.DataFrame, team: str) -> pd.DataFrame:
     return sub[sub["팀"].fillna("").astype(str).str.split("/").apply(lambda xs: team in [x.strip() for x in xs])]
 
 
-def team_player_select(sub: pd.DataFrame, kind: str, key: str, label: str, col_team, col_player):
-    """구단 선택 → 그 구단 선수 선택. 반환: player_id"""
-    team = col_team.selectbox("구단", [ALL_TEAMS] + team_list(sub), key=f"{key}_team")
+def team_player_select(sub: pd.DataFrame, kind: str, key: str, label: str, col_team, col_player, stop: bool = True):
+    """구단을 먼저 고르고, 그 구단 선수만 선택. 반환: player_id (구단 미선택이면 화면 중단)"""
+    teams = team_list(sub)
+    team = col_team.selectbox("구단", teams, index=None, placeholder="구단을 선택하세요", key=f"{key}_team")
+    if team is None:
+        col_player.selectbox(label, [], placeholder="먼저 구단을 선택하세요", disabled=True, key=f"{key}_pid_off")
+        if not stop:
+            return None
+        st.info(f"구단을 선택하면 {label} 목록이 나옵니다.")
+        st.stop()
     s2 = filter_team(sub, team)
     if s2.empty:
         col_player.warning("조건에 맞는 선수가 없습니다.")
         st.stop()
-    if team == ALL_TEAMS:
-        lab = {r[kind]: f"{r['name']}  ({r.get('팀', '') or ''})" for _, r in s2.iterrows()}
-    else:
-        size = "pitches" if kind == "pitcher" else "PA"
-        unit = "구" if kind == "pitcher" else "타석"
-        lab = {r[kind]: f"{r['name']}  · {int(r[size]):,}{unit}" for _, r in s2.iterrows()}
-    opts = s2[kind].tolist()
-    return col_player.selectbox(label, opts, format_func=lambda i: lab.get(i, str(i)), key=f"{key}_pid")
+    lab = dict(zip(s2[kind], s2["name"]))
+    return col_player.selectbox(label, s2[kind].tolist(), format_func=lambda i: lab.get(i, str(i)), key=f"{key}_pid")
 
 
 def pick_player(kind: str, key: str, label: str | None = None, default_top: bool = True):

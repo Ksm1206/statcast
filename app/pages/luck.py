@@ -5,7 +5,7 @@ import streamlit as st
 
 from lib import PCFG, CAT, INK, SURFACE, load, meta, names, note, require_data, setup
 
-setup("📈 기대 성적 갭 — 결과는 과정을 따라오는가")
+setup("📈 기대 성적 — 결과는 과정을 따라오는가")
 require_data()
 lm = meta("luck_meta")
 

@@ -86,7 +86,7 @@ if view == "요약":
         if len(l):
             l = l.iloc[0]
             sig = "유의 (FDR 5%)" if l["유의(FDR 5%)"] else "유의하지 않음"
-            st.markdown(f"**기대 성적 갭** wOBA {l['wOBA']:.3f} − xwOBA {l['xwOBA']:.3f} = **{l['차이']:+.3f}** ({sig}). "
+            st.markdown(f"**기대 성적** wOBA {l['wOBA']:.3f} − xwOBA {l['xwOBA']:.3f} = **{l['차이']:+.3f}** ({sig}). "
                         "−면 맞힌 공의 질에 비해 결과가 덜 나온 것(반등 후보).")
 
 if view == "구종별":
