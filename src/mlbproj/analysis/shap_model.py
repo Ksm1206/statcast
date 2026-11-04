@@ -16,8 +16,9 @@ from .common import load, save, save_json
 
 STUFF_FEATS = ["구속", "회전수", "수직무브", "수평무브", "익스텐션", "릴리스높이", "릴리스측면",
                "패스트볼 대비 구속차", "수직무브 차", "수평무브 차", "is_fb", "is_breaking", "is_offspeed"]
-BAT_FEATS = ["Chase%", "Z-Contact%", "Whiff%", "평균 발사각", "당겨치기%", "SweetSpot%", "배트 스피드",
-             "스윙 길이", "EV90", "BB%", "K%"]
+# K%·BB%는 wOBA 계산에 직접 들어가는 성분이라 넣으면 '정답으로 정답을 설명'하게 됨 → 과정 지표만 사용
+BAT_FEATS = ["Chase%", "Z-Contact%", "Whiff%", "Z-Swing%", "평균 발사각", "당겨치기%", "SweetSpot%", "배트 스피드",
+             "스윙 길이", "EV90"]
 PARAMS = dict(objective="regression", learning_rate=0.03, num_leaves=15, min_child_samples=15,
               subsample=0.8, subsample_freq=1, colsample_bytree=0.9, verbose=-1, seed=0)
 

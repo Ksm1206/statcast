@@ -50,7 +50,7 @@ with c1:
     st.plotly_chart(fig, width="stretch", config=PCFG)
 with c2:
     st.markdown("##### 지수 검증 (순위 상관, 높을수록 좋음)")
-    st.dataframe(V.astype(object).where(V.notna(), "–"), hide_index=True, column_config={col: st.column_config.NumberColumn(format="%.3f") for col in V.columns if col != "지수"})
+    st.dataframe(V, hide_index=True, column_config={col: st.column_config.NumberColumn(format="%.3f") for col in V.columns if col != "지수"})
     note("같은 시즌: 이미 쓰는 성적 지표와 얼마나 맞는지 (방향 통일). 다음 시즌: 올해 지수가 내년 실점 가치를 얼마나 예측하는지. "
          "비교용으로 xwOBA 하나만 썼을 때의 예측력도 넣었습니다. 종합 지수가 이보다 높아야 '합친 의미'가 있습니다.")
     st.dataframe(W[["지표", "방향"]], hide_index=True)

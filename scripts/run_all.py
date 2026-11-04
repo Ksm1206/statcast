@@ -12,9 +12,9 @@ import time
 
 import _path  # noqa: F401  (src 경로 추가)
 from mlbproj import build, collect
-from mlbproj.analysis import abs_effect, aging, clustering, composite, luck, matchup, network, shap_model, spatial, validation
+from mlbproj.analysis import abs_effect, aging, clustering, composite, luck, matchup, network, pitch_types, shap_model, spatial, validation
 
-STEPS = [("clustering", clustering.main), ("shap", shap_model.main), ("network", network.main), ("composite", composite.main), ("luck", luck.main),
+STEPS = [("clustering", clustering.main), ("pitch_types", pitch_types.main), ("shap", shap_model.main), ("network", network.main), ("composite", composite.main), ("luck", luck.main),
          ("spatial", spatial.main), ("matchup", matchup.main), ("abs", abs_effect.main),
          ("aging", aging.main), ("validation", validation.main)]
 

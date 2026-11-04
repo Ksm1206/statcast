@@ -72,7 +72,7 @@ def feature_tables():
     v = vg.pivot_table(index=["batter", "season"], columns="key", values="xw_shr").reindex(columns=GROUPS)
     v.columns = [f"xw_vs_{g}" for g in GROUPS]
     bf = bf.merge(v.reset_index(), on=["batter", "season"], how="left")
-    pc = load("pitcher_clusters")
+    pc = load("pitcher_types")          # 조합형 투수 유형 (포심-슬라이더형 등)
     bc = load("batter_clusters")
     if len(pc):
         pf = pf.merge(pc[["pitcher", "season", "유형"]].rename(columns={"유형": "p_type"}), on=["pitcher", "season"], how="left")
@@ -121,7 +121,9 @@ def add_matchup_features(r: pd.DataFrame) -> pd.DataFrame:
 def model_columns(r: pd.DataFrame) -> list[str]:
     drop = {"pitcher", "batter", "season", "prior", "game_date", "is_post", "outcome", "woba", "xwoba", "is_hit",
             "is_ab", "stand", "p_throws", "y", "p_p_type", "b_b_type"}
-    return [c for c in r.columns if c not in drop and r[c].dtype != object and not c.startswith("lg_")]
+    drop |= {"bb_type"}
+    return [c for c in r.columns if c not in drop and pd.api.types.is_numeric_dtype(r[c]) and not pd.api.types.is_bool_dtype(r[c])
+            and not c.startswith("lg_")]
 
 
 # ------------------------------------------------------------------ 행렬 분해 (ALS)

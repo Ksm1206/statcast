@@ -13,12 +13,13 @@ pid, season, row = pick_player("pitcher", "p")
 # ------------------------------------------------ 성적 카드
 st.subheader(f"{row['name']} · {season}")
 tags = [f"{'좌투' if row.get('p_throws') == 'L' else '우투'}", f"{int(row['구종 수']) if pd.notna(row.get('구종 수')) else '–'}개 구종"]
-cl = load("pitcher_clusters")
-c_row = cl[(cl["pitcher"] == pid) & (cl["season"] == season)]
-cm = meta("clusters_meta").get("pitcher", {})
+cl = load("pitcher_types")
+c_row = cl[(cl["pitcher"] == pid) & (cl["season"] == season)] if len(cl) else cl
 if len(c_row):
-    t = c_row.iloc[0]["유형"]
-    tags.append(f"유형 {t}: {cm.get('desc', {}).get(t, '')}")
+    r_ = c_row.iloc[0]
+    tags = [f"{'좌투' if row.get('p_throws') == 'L' else '우투'}", r_["역할"], f"<b>{r_['유형']}</b>"]
+    tags += [x for x in str(r_["태그"]).split(" · ") if x]
+    tags.append(f"{r_['피치 구성']} ({r_['구성']})")
 st.markdown(" ".join(f"<span class='badge'>{x}</span>" for x in tags), unsafe_allow_html=True)
 
 cards = [("ERA", "ERA", "num", 2), ("FIP", "FIP", "num", 2), ("이닝", "IP", "num", 1), ("WHIP", "WHIP", "num", 2),

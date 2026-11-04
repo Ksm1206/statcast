@@ -25,7 +25,7 @@ def pitcher_features() -> pd.DataFrame:
     grp["슬라이더/스위퍼%"], grp["커브%"], grp["체인지업/스플리터%"] = g("SL", "ST", "SV"), g("CU", "KC"), g("CH", "FS")
     fb = ar[ar["pitch_type"].isin(["FF", "SI", "FC"])].sort_values("pitches").groupby(["pitcher", "season"]).tail(1)
     fb = fb.set_index(["pitcher", "season"])[["구속", "수직무브", "수평무브", "익스텐션", "릴리스높이"]]
-    fb.columns = ["주 패스트볼 구속", "주 패스트볼 수직무브", "주 패스트볼 수평무브", "익스텐션", "릴리스 높이"]
+    fb.columns = ["패스트볼 구속", "패스트볼 수직무브", "패스트볼 수평무브", "익스텐션", "릴리스 높이"]
     X = ps.set_index(["pitcher", "season"])[["Zone%", "Chase%", "Whiff%", "GB%", "K%", "BB%"]]
     X = X.join(grp, how="left").join(fb, how="left")
     X["구종 수"] = ps.set_index(["pitcher", "season"])["구종 수"]

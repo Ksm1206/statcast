@@ -41,7 +41,7 @@ def cluster_threshold_sensitivity() -> list[dict]:
 
 def main():
     cm, sm_, lm, mm, am, ag = (_meta(n) for n in ("clusters_meta", "shap_meta", "luck_meta", "matchup_meta", "abs_meta", "aging_meta"))
-    cpm, nm = _meta("composite_meta"), _meta("network_meta")
+    cpm, nm, ptm = _meta("composite_meta"), _meta("network_meta"), _meta("ptype_meta")
     sens = cluster_threshold_sensitivity()
     comp = load("matchup_model_comparison")
     its = load("abs_its")
@@ -55,7 +55,7 @@ def main():
         if kind in cm:
             rm = ", ".join(f"{n}({'완전공선' if v > 1e6 else f'{v:.1f}'})" for n, v in cm[kind]["vif_removed"]) or "없음"
             add(f"다중공선성 ({lab} 군집)", "VIF > 10 변수 단계적 제거", f"제거: {rm} → {len(cm[kind]['features'])}개 변수")
-            add(f"군집 수 자의성 ({lab})", "엘보우·실루엣·Davies-Bouldin·GMM BIC 비교", f"k = {cm[kind]['k']}")
+            add(f"군집 수 자의성 ({lab})", "엘보우·실루엣·Davies-Bouldin·GMM BIC 비교", f"k = {cm[kind]['k']} (실루엣이 낮아 경계는 약함)")
             add(f"군집 불안정성 ({lab})", "부트스트랩 10회 재군집 ARI", f"평균 {cm[kind]['bootstrap_ari_mean']:.2f} (최소 {cm[kind]['bootstrap_ari_min']:.2f})")
     for s in sens:
         add(f"표본 기준 자의성 ({'투수' if s['kind'] == 'pitcher' else '타자'})", f"최소 기준 {s['기준']}로 상향 후 재군집",
@@ -101,6 +101,13 @@ def main():
     if ag.get("pitcher_velo"):
         add("에이징 커브의 생존 편향", "혼합효과모형(선수 무작위효과) + 델타 방법 비교",
             f"투수 구속 정점 {ag['pitcher_velo'].get('peak_age') or float('nan'):.1f}세")
+    if ptm:
+        l = ptm.get("lda", {})
+        add("투수 유형(규칙)이 실재하는가", "구종 비율 없이 물리 특성만으로 LDA 판별, 투수 단위 5겹 교차검증",
+            f"정확도 {l.get('accuracy', 0):.0%} (기준선 {l.get('baseline', 0):.0%})")
+        add("유형 묶음의 자의성", "유형 평균 성향으로 Ward 계층적 군집", f"상위 그룹 {ptm.get('k_groups')}개 (덴드로그램 최대 간격)")
+        add("유형별 성적 차이 검정의 독립성", "투수별 최근 1시즌만 사용, Kruskal-Wallis + Dunn(FDR)", "유형 쌍별 차이 FDR 보정")
+        add("유형 전환 효과의 평균 회귀 착시", "직전 시즌 값·나이 통제 회귀(HC1)", f"시즌 간 유형 전환율 {ptm.get('transition', {}).get('switch_rate', 0):.0%}")
     for kind, lab in (("pitcher", "투수"), ("batter", "타자")):
         if kind in cpm:
             c = cpm[kind]

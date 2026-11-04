@@ -211,7 +211,7 @@ def pitcher_arsenal(df: pd.DataFrame, season: int) -> pd.DataFrame:
     vs = vs / vs.groupby(level=0).transform("sum")
     for st, lab in (("L", "좌타 구사율"), ("R", "우타 구사율")):
         t[lab] = t.set_index(keys).index.map(vs[st]) if st in vs else np.nan
-    # 구속 차이 (주 패스트볼 대비)
+    # 구속 차이 (패스트볼 대비)
     prim = t[t["pitch_type"].isin(["FF", "SI"])].sort_values("pitches").groupby("pitcher").tail(1).set_index("pitcher")
     t["패스트볼 대비 구속차"] = t["구속"] - t["pitcher"].map(prim["구속"])
     t["수직무브 차"] = t["수직무브"] - t["pitcher"].map(prim["수직무브"])

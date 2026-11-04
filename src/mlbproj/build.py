@@ -71,7 +71,7 @@ def pa_table(df: pd.DataFrame, season: int) -> pd.DataFrame:
         "pitcher": pa["pitcher"].values, "batter": pa["batter"].values, "stand": pa["stand"].values,
         "p_throws": pa["p_throws"].values, "outcome": pa["outcome"].values,
         "woba": pa["woba_value"].astype("float32").values, "xwoba": pa["xwoba_pa"].astype("float32").values,
-        "is_hit": pa["is_hit"].values, "is_ab": pa["is_ab"].values,
+        "is_hit": pa["is_hit"].values, "is_ab": pa["is_ab"].values, "bb_type": pa["bb_type"].values,
     })
 
 

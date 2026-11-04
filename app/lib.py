@@ -317,7 +317,7 @@ def network_figure(t: pd.DataFrame, types: list[str], nodes: pd.DataFrame, title
 
 def profile_block(kind: str, pid: int, season: int, row: pd.Series, axes: list[tuple[str, str]], type_label: str | None):
     """레이더(선수 vs 같은 유형 평균) + 종합 지수 카드."""
-    cl = load(f"{kind}_clusters")
+    cl = load("pitcher_types") if kind == "pitcher" else load(f"{kind}_clusters")
     t = load(f"{kind}_season")
     comp = load(f"composite_{kind}")
     cm = meta("composite_meta").get(kind, {})
@@ -327,7 +327,7 @@ def profile_block(kind: str, pid: int, season: int, row: pd.Series, axes: list[t
     if type_label is not None and len(cl):
         mem = cl[(cl["season"] == season) & (cl["유형"] == type_label)][[kind]]
         tt = t[(t["season"] == season)].merge(mem, on=kind)
-        series.append((f"유형 {type_label} 평균", [tt[f"pct_{m}"].mean() if f"pct_{m}" in tt else np.nan for m, _ in axes], CAT[1]))
+        series.append(((f"{type_label} 평균" if kind == "pitcher" else f"유형 {type_label} 평균"), [tt[f"pct_{m}"].mean() if f"pct_{m}" in tt else np.nan for m, _ in axes], CAT[1]))
     c1, c2 = st.columns([3, 2])
     c1.plotly_chart(radar(series, names_, "프로필 레이더 (리그 백분위, 바깥일수록 좋음)"), width="stretch", config=PCFG)
     with c2:
