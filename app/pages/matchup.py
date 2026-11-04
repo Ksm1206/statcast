@@ -16,11 +16,11 @@ if not (DATA / "matchup_lgb.txt").exists():
 
 
 @st.cache_resource
-def booster():
+def booster(stamp: float):
     return lgb.Booster(model_file=str(DATA / "matchup_lgb.txt"))
 
 
-B = booster()
+B = booster((DATA / "matchup_lgb.txt").stat().st_mtime)
 cols = mm["features"]
 pf, bf, lg = load("matchup_features_pitcher"), load("matchup_features_batter"), load("matchup_league_rates")
 ps, bs = load("pitcher_season"), load("batter_season")

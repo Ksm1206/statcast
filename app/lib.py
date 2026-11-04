@@ -60,16 +60,30 @@ def setup(title: str):
 
 
 # ---------------------------------------------------------------- 데이터
-@st.cache_data(show_spinner=False)
-def load(name: str) -> pd.DataFrame:
+def _stamp(f: Path) -> float:
+    """파일 수정 시각. 데이터가 새로 커밋되면 캐시 키가 바뀌어 자동으로 다시 읽음
+    (앱이 재시작되지 않고 코드만 갱신될 때, 예전에 '파일 없음'으로 캐시된 빈 결과가 남는 문제 방지)."""
+    return f.stat().st_mtime if f.exists() else 0.0
+
+
+@st.cache_data(show_spinner=False, max_entries=200)
+def _load(name: str, stamp: float) -> pd.DataFrame:
     f = DATA / f"{name}.parquet"
     return pd.read_parquet(f) if f.exists() else pd.DataFrame()
 
 
-@st.cache_data(show_spinner=False)
-def meta(name: str) -> dict:
+def load(name: str) -> pd.DataFrame:
+    return _load(name, _stamp(DATA / f"{name}.parquet"))
+
+
+@st.cache_data(show_spinner=False, max_entries=100)
+def _meta(name: str, stamp: float) -> dict:
     f = DATA / f"{name}.json"
     return json.loads(f.read_text()) if f.exists() else {}
+
+
+def meta(name: str) -> dict:
+    return _meta(name, _stamp(DATA / f"{name}.json"))
 
 
 def is_demo() -> bool:
