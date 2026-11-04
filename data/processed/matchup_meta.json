@@ -48,16 +48,16 @@
   "platoon_adv",
   "구종조합_xwOBA"
  ],
- "best_iter": 26,
+ "best_iter": 130,
  "test_season": 2026,
- "train_pa": 31400,
- "test_pa": 31400,
- "possible_pairs_per_season": 23800,
- "pa_per_season": 31400.0,
- "observed_pairs": 22650,
- "pairs_ge_20pa": 0,
- "frequent_pairs_corr": 0.6830152553393369,
- "frequent_pairs_n": 12,
- "n_pitchers": 140,
- "n_batters": 170
+ "train_pa": 723521,
+ "test_pa": 181382,
+ "possible_pairs_per_season": 601829,
+ "pa_per_season": 180742.5,
+ "observed_pairs": 375266,
+ "pairs_ge_20pa": 1690,
+ "frequent_pairs_corr": 0.21939997098415528,
+ "frequent_pairs_n": 724,
+ "n_pitchers": 1747,
+ "n_batters": 1657
 }

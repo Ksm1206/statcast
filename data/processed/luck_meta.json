@@ -1,30 +1,30 @@
 {
  "huber_coef": {
-  "K%": -0.235,
-  "BB%": 0.394,
-  "GB%": -0.079,
-  "HardHit%": 0.241
+  "K%": -0.576,
+  "BB%": 0.322,
+  "GB%": -0.272,
+  "HardHit%": 0.35
  },
  "ols_coef": {
-  "K%": -0.2329999953508377,
-  "BB%": 0.4090000092983246,
-  "GB%": -0.09799999743700027,
-  "HardHit%": 0.2290000021457672
+  "K%": -0.5910000205039978,
+  "BB%": 0.33399999141693115,
+  "GB%": -0.2750000059604645,
+  "HardHit%": 0.35600000619888306
  },
- "huber_vs_ols_spearman": 0.9990830851810788,
- "n": 420,
- "era_resid_persistence": -0.07897445504464387,
- "k_persistence": 0.5175592517190764,
- "pitcher_sig": 29,
- "pitcher_n": 252,
- "batter_sig": 27,
- "batter_n": 507,
- "pitcher_naive_sig": 65,
- "batter_naive_sig": 113,
- "ljungbox_autocorr_share_p": 0.031746031746031744,
- "ljungbox_autocorr_share_b": 0.05128205128205128,
- "luck_persistence_b": 0.16300108400417343,
- "luck_persistence_p": 0.023910814533840117,
- "skill_persistence_b_K": 0.5308287012764774,
- "skill_persistence_b_xwoba": 0.6880462059269622
+ "huber_vs_ols_spearman": 0.9997813014783992,
+ "n": 3276,
+ "era_resid_persistence": 0.061667221626032165,
+ "k_persistence": 0.643988815372257,
+ "pitcher_sig": 0,
+ "pitcher_n": 2636,
+ "batter_sig": 3,
+ "batter_n": 2431,
+ "pitcher_naive_sig": 214,
+ "batter_naive_sig": 253,
+ "ljungbox_autocorr_share_p": 0.051213960546282244,
+ "ljungbox_autocorr_share_b": 0.058823529411764705,
+ "luck_persistence_b": 0.17870436706185372,
+ "luck_persistence_p": 0.06458902450337914,
+ "skill_persistence_b_K": 0.7958554643221892,
+ "skill_persistence_b_xwoba": 0.6236356061377357
 }
