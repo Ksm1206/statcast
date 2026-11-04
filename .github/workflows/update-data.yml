@@ -1,0 +1,76 @@
+name: 데이터 수집 및 분석
+
+on:
+  workflow_dispatch:
+    inputs:
+      seasons:
+        description: "수집할 시즌 (예: 2021-2026 또는 2026)"
+        default: "2021-2026"
+        required: true
+      force:
+        description: "이미 받은 시즌도 다시 받기 (시즌 직후 데이터 수정 반영용)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-pipeline.txt
+
+      - name: 패키지 설치
+        run: pip install -r requirements-pipeline.txt
+
+      - name: 이전에 받은 원본 데이터 불러오기 (캐시)
+        uses: actions/cache/restore@v4
+        with:
+          path: data/raw
+          key: statcast-raw-v1-${{ github.run_id }}
+          restore-keys: statcast-raw-v1-
+
+      - name: 수집 (Statcast · MLB Stats API · FanGraphs)
+        run: |
+          FORCE=""
+          if [ "${{ inputs.force }}" = "true" ]; then FORCE="--force"; fi
+          python scripts/run_all.py --only collect --seasons "${{ inputs.seasons }}" $FORCE
+
+      - name: 원본 데이터 캐시 저장 (실패해도 저장해서 다음 실행 때 이어 받기)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/raw
+          key: statcast-raw-v1-${{ github.run_id }}
+
+      - name: 집계 + 분석
+        run: python scripts/run_all.py --skip-collect
+
+      - name: 파일 크기 확인 (GitHub 100MB 제한)
+        run: |
+          rm -f data/processed/DEMO
+          du -sh data/processed
+          big=$(find data/processed -size +95M)
+          if [ -n "$big" ]; then echo "너무 큰 파일: $big"; exit 1; fi
+
+      - name: 결과 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add -A data/processed
+          git commit -m "데이터 갱신: ${{ inputs.seasons }} ($(date -u +%Y-%m-%d))" || echo "변경 없음"
+          git push
