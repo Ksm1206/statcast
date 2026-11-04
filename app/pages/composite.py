@@ -60,7 +60,7 @@ season = st.selectbox("시즌", sorted(S["season"].unique(), reverse=True))
 d = S[S["season"] == season].copy()
 fig = go.Figure(go.Scattergl(x=d["엔트로피 지수"], y=d["SHAP 지수"], mode="markers", text=d["name"],
                              marker=dict(size=7, color=CAT[0], opacity=.6, line=dict(color=SURFACE, width=1)),
-                             hovertemplate="%{text}<br>엔트로피 %{x:.0f} · SHAP %{y:.0f}<extra></extra>"))
+                             hovertemplate="%{text}<br>엔트로피 %{x:.2f} · SHAP %{y:.2f}<extra></extra>"))
 fig.add_trace(go.Scatter(x=[0, 100], y=[0, 100], mode="lines", line=dict(color=INK, dash="dot", width=1), hoverinfo="skip"))
 fig.update_layout(height=430, showlegend=False, xaxis_title="엔트로피 지수", yaxis_title="SHAP 지수",
                   title="점선에서 멀수록 두 방법의 평가가 다른 선수")
@@ -76,10 +76,10 @@ if team:
 d = d.sort_values("종합 지수", ascending=False).reset_index(drop=True)
 d.index += 1
 st.dataframe(d[["name", "팀", "종합 지수", "엔트로피 지수", "SHAP 지수", "시즌 내 백분위"]].rename(columns={"name": "선수"}),
-             column_config={"종합 지수": st.column_config.ProgressColumn(min_value=0, max_value=100, format="%.1f"),
-                            "엔트로피 지수": st.column_config.NumberColumn(format="%.1f"),
-                            "SHAP 지수": st.column_config.NumberColumn(format="%.1f"),
-                            "시즌 내 백분위": st.column_config.NumberColumn(format="%.1f")}, height=520)
-note("순위는 반올림 전 종합 지수로 매깁니다. 화면에는 소수점 첫째 자리까지 표시합니다.")
+             column_config={"종합 지수": st.column_config.ProgressColumn(min_value=0, max_value=100, format="%.2f"),
+                            "엔트로피 지수": st.column_config.NumberColumn(format="%.2f"),
+                            "SHAP 지수": st.column_config.NumberColumn(format="%.2f"),
+                            "시즌 내 백분위": st.column_config.NumberColumn(format="%.2f")}, height=520)
+note("순위는 종합 지수(소수점 둘째 자리까지 표시) 기준입니다. 표시값까지 같으면 반올림 전 값으로 순위를 정합니다.")
 note("엔트로피 가중법은 분포만 보기 때문에 성적과 무관하게 선수 간 편차가 큰 지표에 가중치가 몰릴 수 있습니다. "
      "그래서 성적 영향력을 보는 SHAP 가중치와 함께 비교하고, 다음 시즌 예측력으로 최종 지수를 정했습니다.")

@@ -349,9 +349,9 @@ def profile_block(kind: str, pid: int, season: int, row: pd.Series, axes: list[t
         lab = "종합 투수 지수" if kind == "pitcher" else "종합 타자 지수"
         if len(r):
             r = r.iloc[0]
-            st.metric(lab, f"{r['종합 지수']:.0f}점", f"시즌 상위 {100 - r['시즌 내 백분위']:.0f}%", delta_color="off")
-            st.markdown(f"<span class='badge'>엔트로피 지수 {r['엔트로피 지수']:.0f}</span>"
-                        f"<span class='badge'>SHAP 지수 {r['SHAP 지수']:.0f}</span>", unsafe_allow_html=True)
+            st.metric(lab, f"{r['종합 지수']:.2f}점", f"시즌 상위 {100 - r['시즌 내 백분위']:.1f}%", delta_color="off")
+            st.markdown(f"<span class='badge'>엔트로피 지수 {r['엔트로피 지수']:.2f}</span>"
+                        f"<span class='badge'>SHAP 지수 {r['SHAP 지수']:.2f}</span>", unsafe_allow_html=True)
             note(f"최종 지수는 다음 시즌 예측력이 더 높았던 <b>{cm.get('final', '')}</b>를 사용합니다. 0~100점(그 시즌 규정 표본 최하 0, 최고 100). "
                  "자세한 가중치는 '종합 지수' 메뉴.")
         else:
