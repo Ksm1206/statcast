@@ -1,4 +1,18 @@
 {
+ "theilsen_coef": {
+  "K%": -0.652,
+  "BB%": 0.395,
+  "GB%": -0.286,
+  "HardHit%": 0.401
+ },
+ "huber_vs_theilsen_spearman": 0.9931680283119761,
+ "ols_vs_theilsen_spearman": 0.9953028269867121,
+ "top20_overlap_huber_ols": 0.9833333333333334,
+ "top20_overlap_huber_ts": 0.9250000000000002,
+ "resid_skew": 0.4955188004669612,
+ "resid_excess_kurtosis": 1.3135257034851602,
+ "lowess_max_abs": 1.203170174894858,
+ "shapiro_p": 1.6721737769612426e-19,
  "huber_coef": {
   "K%": -0.576,
   "BB%": 0.322,
@@ -11,10 +25,10 @@
   "GB%": -0.2750000059604645,
   "HardHit%": 0.35600000619888306
  },
- "huber_vs_ols_spearman": 0.9997813014783992,
+ "huber_vs_ols_spearman": 0.9997812981506408,
  "n": 3276,
- "era_resid_persistence": 0.061667221626032165,
- "k_persistence": 0.643988815372257,
+ "era_resid_persistence": 0.06166722162603217,
+ "k_persistence": 0.6439888153722572,
  "pitcher_sig": 0,
  "pitcher_n": 2636,
  "batter_sig": 3,
