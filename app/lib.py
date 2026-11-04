@@ -38,6 +38,8 @@ pio.templates["mlb"] = go.layout.Template(layout=dict(
     margin=dict(l=50, r=20, t=40, b=40), title=dict(font=dict(size=15, color=INK)),
 ))
 pio.templates.default = "mlb"
+# 툴바를 숨겨 차트마다 붙는 DOM을 줄임 (스크롤 버벅임 완화)
+PCFG = {"displayModeBar": False, "scrollZoom": False, "responsive": True}
 
 CSS = """
 <style>

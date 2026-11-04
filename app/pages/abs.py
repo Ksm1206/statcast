@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from lib import CAT, DIV, GRID, INK, INK2, SURFACE, grid_centers, load, meta, names, note, require_data, setup, zone_shapes
+from lib import PCFG, CAT, DIV, GRID, INK, INK2, SURFACE, grid_centers, load, meta, names, note, require_data, setup, zone_shapes
 
 setup("🤖 ABS 챌린지 전후 비교 (2026)")
 require_data()
@@ -39,7 +39,7 @@ for i, s in enumerate(seasons):
                              line=dict(color=CAT[7] if post else ["#c3c2b7", "#a8a69e", "#898781", "#6e6c66", "#52514e"][i % 5],
                                        width=3 if post else 2), marker=dict(size=8 if post else 6)))
 fig.update_layout(title=f"{metric} 월별 추이 (빨강 = ABS 시즌)", height=360, xaxis=dict(title="월", dtick=1), yaxis_title="%")
-st.plotly_chart(fig, width="stretch")
+st.plotly_chart(fig, width="stretch", config=PCFG)
 
 st.subheader("판정 지도는 어디서 바뀌었나")
 g = load("abs_grid_diff")
@@ -58,7 +58,7 @@ with c1:
     zone_shapes(fig)
     fig.update_layout(title="지켜본 공의 콜 스트라이크율 변화 (2026 − 도입 전, * = FDR 5% 유의)", height=460,
                       xaxis=dict(title="포수 시점 좌우(ft)", showgrid=False), yaxis=dict(title="높이(ft)", showgrid=False, scaleanchor="x"))
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, width="stretch", config=PCFG)
 with c2:
     note(f"칸별로 도입 전과 2026의 콜 스트라이크 비율을 두 비율 z검정으로 비교하고 FDR로 보정했습니다. "
          f"유의하게 바뀐 칸: {am.get('cells_sig', 0)} / {am.get('cells', 0)}. "
@@ -74,7 +74,7 @@ if len(did):
          "같은 분석을 도입 전 구간(위약)에 적용해 원래부터 있던 추세가 아닌지 함께 봅니다.")
     dd = load("abs_pitcher_did")
     dd["name"] = dd["pitcher"].map(names("pitcher"))
-    fig = go.Figure(go.Scatter(x=dd["edge_dep"] * 100, y=dd["ΔBB%"] * 100, mode="markers",
+    fig = go.Figure(go.Scattergl(x=dd["edge_dep"] * 100, y=dd["ΔBB%"] * 100, mode="markers",
                                marker=dict(size=7, color=CAT[0], opacity=.7, line=dict(color=SURFACE, width=1)), text=dd["name"],
                                hovertemplate="%{text}<br>경계 의존도 %{x:.1f}%<br>ΔBB% %{y:+.2f}%p<extra></extra>"))
     b = np.polyfit(dd["edge_dep"] * 100, dd["ΔBB%"] * 100, 1)
@@ -83,4 +83,4 @@ if len(did):
     fig.add_hline(y=0, line=dict(color=INK2, width=1, dash="dot"))
     fig.update_layout(title="직전 시즌 경계 콜 의존도 vs 2026 볼넷률 변화", height=420, showlegend=False,
                       xaxis_title="콜 스트라이크 중 경계 공 비율 (%)", yaxis_title="BB% 변화 (%p)")
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, width="stretch", config=PCFG)

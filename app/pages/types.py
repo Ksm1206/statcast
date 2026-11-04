@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from lib import CAT, DIV, INK2, MUTED, SURFACE, load, meta, names, note, require_data, setup
+from lib import PCFG, CAT, DIV, INK2, MUTED, SURFACE, load, meta, names, note, require_data, setup
 
 setup("🧭 유형 지도 · SHAP 요인 분석")
 require_data()
@@ -28,14 +28,14 @@ with c1:
     fig = go.Figure()
     for t in types:
         x = d[d["유형"] == t]
-        fig.add_trace(go.Scatter(x=x["pc1"], y=x["pc2"], mode="markers", name=f"유형 {t} ({len(x)})",
+        fig.add_trace(go.Scattergl(x=x["pc1"], y=x["pc2"], mode="markers", name=f"유형 {t} ({len(x)})",
                                  marker=dict(size=8, color=color[t], line=dict(color=SURFACE, width=1), opacity=.85),
                                  customdata=np.c_[x["name"], x["season"], x["gmm_확신도"]],
                                  hovertemplate="%{customdata[0]} (%{customdata[1]})<br>GMM 확신도 %{customdata[2]:.2f}<extra>유형 " + t + "</extra>"))
     pv = cm.get("pca_var", [0, 0])
     fig.update_layout(title=f"PCA 2차원 유형 지도 (설명력 {pv[0] * 100:.0f}% + {pv[1] * 100:.0f}%)", height=520,
                       xaxis_title="주성분 1", yaxis_title="주성분 2")
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, width="stretch", config=PCFG)
 with c2:
     st.markdown(f"##### k = {cm.get('k')} 선택 근거")
     ks = load(f"{kind}_k_selection")
@@ -43,7 +43,7 @@ with c2:
                                hovertemplate="k=%{x}: 실루엣 %{y:.3f}<extra></extra>"))
     fig.add_vline(x=cm.get("k"), line=dict(color=INK2, dash="dot"))
     fig.update_layout(height=200, title="실루엣 계수 (높을수록 잘 분리)", margin=dict(t=40, b=30), xaxis=dict(dtick=1))
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, width="stretch", config=PCFG)
     show = ks.rename(columns={"inertia": "엘보우(관성)", "silhouette": "실루엣", "davies_bouldin": "Davies-Bouldin", "gmm_bic": "GMM BIC"})
     st.dataframe(show, hide_index=True, column_config={c: st.column_config.NumberColumn(format="%.3f") for c in show.columns if c != "k"})
     rm = cm.get("vif_removed", [])
@@ -58,7 +58,7 @@ fig = go.Figure(go.Heatmap(z=prof.values, x=prof.columns, y=[f"유형 {t}" for t
                            textfont=dict(size=11), xgap=2, ygap=2,
                            colorbar=dict(title="Z", thickness=10), hovertemplate="%{y} · %{x}<br>Z %{z:.2f}<extra></extra>"))
 fig.update_layout(height=120 + 50 * len(prof), title="유형별 평균 (색 = 리그 대비 Z점수, 숫자 = 실제 평균)", xaxis=dict(tickangle=-35))
-st.plotly_chart(fig, width="stretch")
+st.plotly_chart(fig, width="stretch", config=PCFG)
 for t in prof.index:
     st.markdown(f"<span class='badge' style='border-left:4px solid {color[t]}'>유형 {t}</span> {cm.get('desc', {}).get(t, '')} · {cm.get('sizes', {}).get(t, 0)}명·시즌", unsafe_allow_html=True)
 pick = st.selectbox("유형 소속 선수 보기", types, format_func=lambda t: f"유형 {t}")
@@ -85,13 +85,13 @@ with c1:
     fig = go.Figure(go.Bar(x=imp.values, y=imp.index, orientation="h", marker=dict(color=CAT[0], line=dict(color=SURFACE, width=2)),
                            hovertemplate="%{y}: %{x:.4f}<extra></extra>"))
     fig.update_layout(title="평균 |SHAP| (전역 중요도)", height=60 + 26 * len(imp), margin=dict(l=130))
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, width="stretch", config=PCFG)
 with c2:
     if len(imp):
         f = st.selectbox("특성별 SHAP 의존도", imp.index[::-1])
         x, y = sh[f"val_{f}"], sh[f"shap_{f}"]
-        fig = go.Figure(go.Scatter(x=x, y=y, mode="markers", marker=dict(size=6, color=CAT[0], opacity=.45),
+        fig = go.Figure(go.Scattergl(x=x, y=y, mode="markers", marker=dict(size=6, color=CAT[0], opacity=.45),
                                    hovertemplate=f"{f} %{{x:.2f}}<br>SHAP %{{y:.4f}}<extra></extra>"))
         fig.add_hline(y=0, line=dict(color=MUTED, width=1))
         fig.update_layout(title=f"{f} 값이 커질수록 예측이 어떻게 변하나", height=380, xaxis_title=f, yaxis_title="SHAP 값")
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, width="stretch", config=PCFG)

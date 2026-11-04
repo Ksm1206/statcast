@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from lib import CAT, INK, SURFACE, load, meta, names, note, require_data, setup
+from lib import PCFG, CAT, INK, SURFACE, load, meta, names, note, require_data, setup
 
 setup("🔬 검증 · 방법론")
 require_data()
@@ -31,11 +31,11 @@ with c2:
     lo, hi = float(cal[["예측", "실제"]].min().min()), float(cal[["예측", "실제"]].max().max())
     fig.add_trace(go.Scatter(x=[lo, hi], y=[lo, hi], mode="lines", line=dict(color=INK, dash="dot", width=1), hoverinfo="skip"))
     fig.update_layout(title="보정 곡선 (예측 10분위)", height=320, showlegend=False, xaxis_title="예측 기대 wOBA", yaxis_title="실제 xwOBA")
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, width="stretch", config=PCFG)
 imp = load("matchup_importance").head(15).iloc[::-1]
 fig = go.Figure(go.Bar(x=imp["중요도(gain)"], y=imp["특성"], orientation="h", marker=dict(color=CAT[0], line=dict(color=SURFACE, width=2))))
 fig.update_layout(title="맞대결 LightGBM 특성 중요도 Top 15 (p_ = 투수, b_ = 타자)", height=480, margin=dict(l=170))
-st.plotly_chart(fig, width="stretch")
+st.plotly_chart(fig, width="stretch", config=PCFG)
 
 st.subheader("에이징 커브")
 ag = meta("aging_meta")
@@ -48,7 +48,7 @@ for col, name, title, unit in ((c1, "aging_pitcher_velo", "투수 패스트볼 �
     fig.add_trace(go.Scatter(x=d["age"], y=d["혼합효과모형"], name="혼합효과모형", mode="lines", line=dict(color=CAT[0], width=2)))
     fig.add_trace(go.Scatter(x=d["age"], y=d["델타 방법"], name="델타 방법", mode="lines", line=dict(color=CAT[1], width=2, dash="dash")))
     fig.update_layout(title=title, height=340, xaxis_title="나이", yaxis_title=unit)
-    col.plotly_chart(fig, width="stretch")
+    col.plotly_chart(fig, width="stretch", config=PCFG)
 note("혼합효과모형: 선수마다 다른 출발점(무작위 절편)을 허용한 2차 곡선. 델타 방법: 같은 선수의 연속 시즌 변화량을 나이별로 누적. "
      "두 방법이 비슷하면 '잘하는 선수만 오래 남는' 생존 편향의 영향이 작다는 뜻입니다.")
 

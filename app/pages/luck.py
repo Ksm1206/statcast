@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from lib import CAT, INK, SURFACE, load, meta, names, note, require_data, setup
+from lib import PCFG, CAT, INK, SURFACE, load, meta, names, note, require_data, setup
 
 setup("🎲 운 vs 실력")
 require_data()
@@ -32,7 +32,7 @@ d["name"] = d[key].map(names(key))
 
 fig = go.Figure()
 ns, sg = d[~d["유의(FDR 5%)"]], d[d["유의(FDR 5%)"]]
-fig.add_trace(go.Scatter(x=ns["xwOBA"], y=ns["wOBA"], mode="markers", name="유의하지 않음",
+fig.add_trace(go.Scattergl(x=ns["xwOBA"], y=ns["wOBA"], mode="markers", name="유의하지 않음",
                          marker=dict(size=7, color="#c3c2b7", line=dict(color=SURFACE, width=1)),
                          customdata=np.c_[ns["name"], ns["PA"], ns["q_FDR"]],
                          hovertemplate="%{customdata[0]}<br>xwOBA %{x:.3f} → wOBA %{y:.3f}<br>%{customdata[1]}타석 · q=%{customdata[2]:.3f}<extra></extra>"))
@@ -46,7 +46,7 @@ fig.add_trace(go.Scatter(x=[lo, hi], y=[lo, hi], mode="lines", line=dict(color=I
 side = "허용 " if key == "pitcher" else ""
 fig.update_layout(title=f"{side}xwOBA(기대) vs {side}wOBA(실제) — 점선 위 = 기대보다 결과가 좋음(타자)/나쁨(투수)", height=520,
                   xaxis_title="xwOBA", yaxis_title="wOBA")
-st.plotly_chart(fig, width="stretch")
+st.plotly_chart(fig, width="stretch", config=PCFG)
 
 c1, c2 = st.columns(2)
 cols = ["name", "PA", "wOBA", "xwOBA", "차이", "z_HAC", "q_FDR"]
@@ -68,13 +68,13 @@ if key == "pitcher":
     e = load("era_residuals")
     e = e[e["season"] == season].copy()
     e["name"] = e["pitcher"].map(names("pitcher"))
-    fig = go.Figure(go.Scatter(x=e["기대 ERA"], y=e["ERA"], mode="markers", marker=dict(size=7, color=CAT[0], opacity=.7, line=dict(color=SURFACE, width=1)),
+    fig = go.Figure(go.Scattergl(x=e["기대 ERA"], y=e["ERA"], mode="markers", marker=dict(size=7, color=CAT[0], opacity=.7, line=dict(color=SURFACE, width=1)),
                                customdata=np.c_[e["name"], e["IP"]],
                                hovertemplate="%{customdata[0]} (%{customdata[1]:.0f}이닝)<br>기대 %{x:.2f} · 실제 %{y:.2f}<extra></extra>"))
     m = float(min(e["기대 ERA"].min(), e["ERA"].min())), float(max(e["기대 ERA"].max(), e["ERA"].max()))
     fig.add_trace(go.Scatter(x=m, y=m, mode="lines", line=dict(color=INK, dash="dot", width=1), hoverinfo="skip", showlegend=False))
     fig.update_layout(height=430, xaxis_title="기대 ERA (K%·BB%·GB%·HardHit%)", yaxis_title="실제 ERA", showlegend=False)
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, width="stretch", config=PCFG)
     if lm.get("huber_coef"):
         note(f"표준화 계수(Huber): {lm['huber_coef']} · OLS와 잔차 순위 상관 ρ = {lm['huber_vs_ols_spearman']:.3f} "
              "(이상치 몇 명이 기준선을 끌고 가지 않음을 확인). ERA 잔차의 연도 간 상관 "

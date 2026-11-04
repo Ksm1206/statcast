@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from lib import ALL_TEAMS, CAT, DATA, filter_team, team_player_select, DIV, INK, MUTED, PITCH_COLOR, SURFACE, grid_heatmap, ko, load, meta, names, note, require_data, setup
+from lib import PCFG, ALL_TEAMS, CAT, DATA, filter_team, team_player_select, DIV, INK, MUTED, PITCH_COLOR, SURFACE, grid_heatmap, ko, load, meta, names, note, require_data, setup
 from mlbproj.analysis.matchup import OUTCOMES, WOBA_W, predict_pairs
 
 setup("⚔️ 맞대결 시뮬레이터")
@@ -67,7 +67,7 @@ for name, vals, col in (("LightGBM", P[0], CAT[0]), ("Log5", L[0], CAT[1]), ("�
     fig.add_trace(go.Bar(x=[LAB[o] for o in OUTCOMES], y=vals * 100, name=name, marker=dict(color=col, line=dict(color=SURFACE, width=2)),
                          text=[f"{v * 100:.1f}" for v in vals], textposition="outside", hovertemplate="%{x}: %{y:.1f}%<extra>" + name + "</extra>"))
 fig.update_layout(barmode="group", title="타석 결과 확률", height=380, yaxis_title="%")
-st.plotly_chart(fig, width="stretch")
+st.plotly_chart(fig, width="stretch", config=PCFG)
 
 # ------------------------------------------------ 구종 조합 분석
 st.subheader("구종 조합으로 본 맞대결")
@@ -98,7 +98,7 @@ if len(t):
         fig.add_trace(go.Scatter(x=t["구종"], y=t["투수 피xwOBA"], name="투수 피xwOBA (이 구종)", mode="markers",
                                  marker=dict(symbol="diamond", size=12, color=INK, line=dict(color=SURFACE, width=2))))
         fig.update_layout(title="구종별: 타자의 강점(막대) vs 투수의 강점(◆)", height=360, yaxis_title="xwOBA")
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, width="stretch", config=PCFG)
     with c2:
         show = t[["구종", "투수 구사율", "타자 xwOBA(축소)", "타자 표본 PA", "타자 Whiff%", "기여"]].copy()
         show["투수 구사율"] *= 100
@@ -115,9 +115,9 @@ g1 = pg[(pg["pitcher"] == pid) & (pg["season"] == season) & (pg["stand"] == stan
 bg = load("batter_grid")
 g2 = bg[(bg["batter"] == bid) & (bg["season"] == season)]
 if len(g1):
-    c1.plotly_chart(grid_heatmap(g1, "density", f"투수가 {'좌' if stand == 'L' else '우'}타자에게 던지는 위치"), width="stretch")
+    c1.plotly_chart(grid_heatmap(g1, "density", f"투수가 {'좌' if stand == 'L' else '우'}타자에게 던지는 위치"), width="stretch", config=PCFG)
 if len(g2):
-    c2.plotly_chart(grid_heatmap(g2, "xwoba", "타자의 위치별 타구 xwOBA", min_n=3), width="stretch")
+    c2.plotly_chart(grid_heatmap(g2, "xwoba", "타자의 위치별 타구 xwOBA", min_n=3), width="stretch", config=PCFG)
 
 # ------------------------------------------------ 실제 기록
 h2h = load("h2h")
