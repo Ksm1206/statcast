@@ -76,9 +76,10 @@ if team:
 d = d.sort_values("종합 지수", ascending=False).reset_index(drop=True)
 d.index += 1
 st.dataframe(d[["name", "팀", "종합 지수", "엔트로피 지수", "SHAP 지수", "시즌 내 백분위"]].rename(columns={"name": "선수"}),
-             column_config={"종합 지수": st.column_config.ProgressColumn(min_value=0, max_value=100, format="%.0f"),
-                            "엔트로피 지수": st.column_config.NumberColumn(format="%.0f"),
-                            "SHAP 지수": st.column_config.NumberColumn(format="%.0f"),
-                            "시즌 내 백분위": st.column_config.NumberColumn(format="%.0f")}, height=520)
+             column_config={"종합 지수": st.column_config.ProgressColumn(min_value=0, max_value=100, format="%.1f"),
+                            "엔트로피 지수": st.column_config.NumberColumn(format="%.1f"),
+                            "SHAP 지수": st.column_config.NumberColumn(format="%.1f"),
+                            "시즌 내 백분위": st.column_config.NumberColumn(format="%.1f")}, height=520)
+note("순위는 반올림 전 종합 지수로 매깁니다. 화면에는 소수점 첫째 자리까지 표시합니다.")
 note("엔트로피 가중법은 분포만 보기 때문에 성적과 무관하게 선수 간 편차가 큰 지표에 가중치가 몰릴 수 있습니다. "
      "그래서 성적 영향력을 보는 SHAP 가중치와 함께 비교하고, 다음 시즌 예측력으로 최종 지수를 정했습니다.")

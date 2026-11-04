@@ -325,8 +325,11 @@ else:
             note("K%·Chase%·Whiff%·GB%는 낮을수록 좋아서 레이더에서는 뒤집어 그렸습니다. 발사각·당겨치기%처럼 좋고 나쁨이 없는 지표는 값 그대로입니다.")
         pick = st.selectbox("유형 소속 타자 보기", types, format_func=lambda t: f"유형 {t}")
         bs = load("batter_season")
-        mem = cl[cl["유형"] == pick].merge(bs[["batter", "season", "name", "PA"]], on=["batter", "season"]).sort_values("PA", ascending=False)
-        st.dataframe(mem[["name", "season", "PA"]].rename(columns={"name": "타자", "season": "시즌"}), hide_index=True, height=260)
+        mem = cl[cl["유형"] == pick].merge(bs[["batter", "season", "name", "PA"]], on=["batter", "season"])
+        # 선수당 한 줄: 이 유형으로 분류된 시즌들의 타석 합계 순
+        mem = mem.groupby("batter").agg(타자=("name", "last"), PA=("PA", "sum")).sort_values("PA", ascending=False)
+        st.dataframe(mem[["타자"]], hide_index=True, height=260)
+        note(f"이 유형으로 한 번이라도 분류된 타자 {len(mem)}명 (2021–2026 합산 타석이 많은 순).")
     else:
         sm = meta("shap_meta").get("batter", {})
         sh = load("batter_shap")
