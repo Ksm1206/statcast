@@ -44,9 +44,9 @@ def stuff_model():
     y = ar["Whiff%"].astype(float)
     w = np.sqrt(ar["pitches"].astype(float))
     model, oof, r2, contrib = _cv_fit(X, y, w, ar["pitcher"])
-    pred = model.predict(X)
+    # 교차검증 예측 사용: 전체 학습 모델의 예측은 그 구종의 실제 헛스윙률을 외워 섞이고, 다른 시즌(검증 시즌 포함) 정보도 새어 들어감
     # 구종 그룹별 평균 대비 지수 (100 = 같은 구종 그룹의 리그 평균)
-    ar["예측 헛스윙률"] = pred
+    ar["예측 헛스윙률"] = oof
     base = ar.groupby(g)["예측 헛스윙률"].transform(lambda s: np.average(s, weights=ar.loc[s.index, "pitches"]))
     ar["구위 지수"] = 100 * ar["예측 헛스윙률"] / base
     sh = pd.DataFrame(contrib[:, :-1], columns=feats)

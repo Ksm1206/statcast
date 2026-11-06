@@ -60,13 +60,15 @@ def _fetch_day_direct(season: int, d: date) -> pd.DataFrame:
         try:
             r = requests.get(url, headers=HEADERS, timeout=120)
             r.raise_for_status()
+            # 경기 없는 날도 헤더만 있는 CSV가 옴 → 빈 응답·HTML(차단/오류 페이지)은 실패로 보고 재시도
             if not r.text.strip() or r.text.lstrip().startswith("<"):
-                return pd.DataFrame()
+                raise ValueError("CSV가 아닌 응답")
             return pd.read_csv(io.StringIO(r.text), low_memory=False)
         except Exception as e:  # noqa: BLE001
             print(f"    재시도 {attempt + 1}/4 ({d}): {e}")
             time.sleep(5 * (attempt + 1))
-    return pd.DataFrame()
+    # 빈 표를 돌려주면 그 달이 '완료'로 저장되어 다시 받지 않으므로 중단 (받은 달은 캐시에 남아 다음 실행 때 이어 받음)
+    raise RuntimeError(f"Statcast {d} 다운로드 실패")
 
 
 def _fetch_range(season: int, a: date, b: date) -> pd.DataFrame:
@@ -152,10 +154,10 @@ def _dedupe_traded(df: pd.DataFrame, games_col: str) -> pd.DataFrame:
     return pd.concat(keep, ignore_index=True)
 
 
-def collect_season_stats(season: int, group: str) -> pd.DataFrame:
+def collect_season_stats(season: int, group: str, force: bool = False) -> pd.DataFrame:
     """group: 'pitching' 또는 'hitting'."""
     out = RAW / f"mlbapi_{group}_{season}.parquet"
-    if out.exists():
+    if out.exists() and not force:
         return pd.read_parquet(out)
     rows, offset = [], 0
     while True:
@@ -226,12 +228,12 @@ def _fg_api(season: int, kind: str) -> pd.DataFrame:
     return df
 
 
-def collect_fangraphs(season: int) -> None:
+def collect_fangraphs(season: int, force: bool = False) -> None:
     """FanGraphs fWAR·wRC+ 등 (선택). JSON API → pybaseball 순서로 시도하고, 둘 다 막히면 건너뜀.
-    막혔을 때는 리더보드 CSV를 data/external 에 직접 넣으면 됨."""
+    막혔을 때는 리더보드 CSV를 data/external 에 직접 넣으면 됨. force여도 받기에 실패하면 기존 파일을 그대로 둠."""
     for kind in ("pitching", "batting"):
         out = EXTERNAL / f"fangraphs_{kind}_{season}.csv"
-        if out.exists() and out.stat().st_size > 100:
+        if out.exists() and out.stat().st_size > 100 and not force:
             continue
         df = pd.DataFrame()
         try:
@@ -272,10 +274,10 @@ def main(argv=None):
     for s in seasons:
         sc = collect_statcast(s, force=a.force)
         ids |= set(sc["pitcher"].dropna().astype(int)) | set(sc["batter"].dropna().astype(int))
-        collect_season_stats(s, "pitching")
-        collect_season_stats(s, "hitting")
+        collect_season_stats(s, "pitching", force=a.force)
+        collect_season_stats(s, "hitting", force=a.force)
         if not a.skip_fangraphs:
-            collect_fangraphs(s)
+            collect_fangraphs(s, force=a.force)
     collect_people(sorted(ids))
 
 
