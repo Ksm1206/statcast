@@ -2,14 +2,14 @@
  "pitcher": {
   "final": "엔트로피 지수",
   "n": 3441,
-  "entropy_vs_shap_spearman": 0.8428436296052373,
+  "entropy_vs_shap_spearman": 0.8462334876069731,
   "top_entropy_weight": "구위 지수",
   "top_shap_weight": "xwOBA"
  },
  "batter": {
   "final": "SHAP 지수",
   "n": 2431,
-  "entropy_vs_shap_spearman": 0.9328985618748757,
+  "entropy_vs_shap_spearman": 0.9313992296932586,
   "top_entropy_weight": "Barrel%",
   "top_shap_weight": "xwOBA"
  }
