@@ -24,8 +24,6 @@ def _save(name: str, frames: list[pd.DataFrame]) -> pd.DataFrame:
     for c in df.columns:
         if df[c].dtype == "float64":
             df[c] = df[c].astype("float32")
-        elif df[c].dtype == "bool":
-            pass
     out = (INTERIM if name in INTERIM_TABLES else PROCESSED) / f"{name}.parquet"
     df.to_parquet(out, index=False, compression="zstd")
     print(f"  → {name}.parquet  {len(df):,}행")

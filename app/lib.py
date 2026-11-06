@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -14,9 +13,8 @@ import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-DATA = Path(os.environ.get("MLB_PROCESSED_DIR", ROOT / "data" / "processed"))
 
-from mlbproj.config import GRID_N, GRID_X, GRID_Z, PITCH_NAME_KO  # noqa: E402
+from mlbproj.config import GRID_N, GRID_X, GRID_Z, PITCH_NAME_KO, PROCESSED as DATA  # noqa: E402
 
 # ---------------------------------------------------------------- 색상 (검증된 범주형 8색, 순서 고정)
 SURFACE, INK, INK2, MUTED, GRID, AXIS = "#fcfcfb", "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#c3c2b7"

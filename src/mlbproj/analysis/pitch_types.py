@@ -25,9 +25,10 @@ from sklearn.metrics import adjusted_rand_score, confusion_matrix
 from sklearn.model_selection import GroupKFold
 from sklearn.preprocessing import StandardScaler
 
+from ..config import PITCH_NAME_KO
 from .common import bh_fdr, load, save, save_json
 
-FB = {"FF": "포심", "SI": "싱커", "FC": "커터"}
+FB ={"FF": "포심", "SI": "싱커", "FC": "커터"}
 SEC = {"SL": "슬라이더", "ST": "스위퍼", "SV": "스위퍼", "CH": "체인지업", "FS": "스플리터", "FO": "스플리터",
        "CU": "커브", "KC": "커브", "CS": "커브", "SC": "체인지업", "KN": "기타", "EP": "기타"}
 TYPE_ORDER = ["포심-슬라이더형", "포심-스위퍼형", "포심-커브형", "포심-체인지업형", "포심-스플리터형",
@@ -35,8 +36,6 @@ TYPE_ORDER = ["포심-슬라이더형", "포심-스위퍼형", "포심-커브형
 PROFILE = ["K%", "BB%", "Whiff%", "Chase%", "GB%", "HardHit%", "xwOBA", "패스트볼 평균구속", "패스트볼 수직무브",
            "패스트볼 수평무브", "구종 수"]
 TEST_METRICS = ["K%", "BB%", "Whiff%", "GB%", "xwOBA", "HardHit%", "RV/100"]
-KO = {"FF": "포심", "SI": "싱커", "FC": "커터", "SL": "슬라이더", "ST": "스위퍼", "SV": "슬러브", "CH": "체인지업",
-      "FS": "스플리터", "CU": "커브", "KC": "너클커브", "CS": "슬로커브", "KN": "너클볼"}
 
 
 def type_name(fb: str | None, sec: str | None) -> str:
@@ -67,7 +66,7 @@ def build_types() -> pd.DataFrame:
         core = g[g["구사율"] >= 0.12]
         n_core = len(core)
         mix = "2피치" if n_core <= 2 else ("3피치" if n_core == 3 else "다양형")   # 구사율 12% 이상 구종 수
-        comp = "+".join(KO.get(x, x) for x in (g.head(2)["pitch_type"] if mix == "2피치" else core["pitch_type"]))
+        comp = "+".join(PITCH_NAME_KO.get(x, x) for x in (g.head(2)["pitch_type"] if mix == "2피치" else core["pitch_type"]))
         rows.append({"pitcher": p, "season": s, "패스트볼": fb["pitch_type"] if fb is not None else None,
                      "보조구종": sec["pitch_type"] if sec is not None else None,
                      "유형": type_name(fb["pitch_type"] if fb is not None else None, sec["pitch_type"] if sec is not None else None),
