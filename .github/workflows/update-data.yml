@@ -67,6 +67,12 @@ jobs:
           big=$(find data/processed -size +95M)
           if [ -n "$big" ]; then echo "너무 큰 파일: $big"; exit 1; fi
 
+      - name: 테스트 (실패하면 커밋하지 않음)
+        run: |
+          python tests/test_collect.py
+          python tests/test_traded.py
+          python tests/test_app.py
+
       - name: 결과 커밋
         run: |
           git config user.name "github-actions[bot]"

@@ -137,20 +137,28 @@ def _dedupe_traded(df: pd.DataFrame, games_col: str) -> pd.DataFrame:
         if len(g) == 1:
             keep.append(g)
             continue
-        top = g.loc[g[games_col].idxmax()]
-        rest = g.drop(top.name)
-        if rest[games_col].sum() == top[games_col]:
-            keep.append(g.loc[[top.name]])            # 합계 행이 이미 있음
+        is_total = g["team"].astype(str).eq("")       # 합계 split에는 팀이 없음
+        teams = "/".join(g.loc[~is_total, "team"].astype(str))
+        if is_total.any():
+            row = g[is_total].iloc[[0]].copy()
         else:                                          # 팀별 행만 있음 → 합산
-            num = g.select_dtypes("number").drop(columns=["player_id"], errors="ignore").sum()
+            num = g.select_dtypes("number").drop(columns=["player_id"], errors="ignore")
             row = g.iloc[[-1]].copy()
-            for c in num.index:
-                row[c] = num[c]
-            if "outs" in num.index:   # 이닝 문자열("50.1")은 합산 불가 → 아웃 수로 다시 계산
-                o = int(num["outs"])
+            for c in num.columns:  # 정수 = 누적 기록(합산), 실수 = 비율(.250 같은 값, 합산하면 틀림 → 아래에서 다시 계산)
+                row[c] = num[c].sum() if pd.api.types.is_integer_dtype(num[c]) else np.nan
+            if "outs" in num.columns:   # 이닝 문자열("50.1")은 합산 불가 → 아웃 수로 다시 계산
+                o = int(row["outs"].iloc[0])
                 row["inningsPitched"] = f"{o // 3}.{o % 3}"
-            row["team"] = "/".join(g["team"].astype(str))
-            keep.append(row)
+            if {"atBats", "hits", "baseOnBalls", "hitByPitch", "sacFlies", "totalBases"} <= set(row.columns):
+                r = row.iloc[0]
+                ab, on = r["atBats"], r["hits"] + r["baseOnBalls"] + r["hitByPitch"]
+                pa = ab + r["baseOnBalls"] + r["hitByPitch"] + r["sacFlies"]
+                row["avg"] = r["hits"] / ab if ab else np.nan
+                row["obp"] = on / pa if pa else np.nan
+                row["slg"] = r["totalBases"] / ab if ab else np.nan
+                row["ops"] = row["obp"] + row["slg"]
+        row["team"] = teams
+        keep.append(row)
     return pd.concat(keep, ignore_index=True)
 
 
